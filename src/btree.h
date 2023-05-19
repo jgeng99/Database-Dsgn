@@ -49,38 +49,38 @@ const  int STRINGSIZE = 10;
 /**
  * @brief Number of key slots in B+Tree leaf for INTEGER key.
  */
-//                                                  sibling ptr     valid entry num        key               rid
-const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) - sizeof( int )) / ( sizeof( int ) + sizeof( RecordId ) );
+//                                                  sibling ptr             key               rid
+const  int INTARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
  */
-//                                                     sibling ptr    valid entry num          key               rid
-const  int DOUBLEARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) - sizeof( int )) / ( sizeof( double ) + sizeof( RecordId ) );
+//                                                     sibling ptr               key               rid
+const  int DOUBLEARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( sizeof( double ) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for STRING key.
  */
-//                                                    sibling ptr     valid entry num     key                      rid
-const  int STRINGARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) - sizeof( int )) / ( 10 * sizeof(char) + sizeof( RecordId ) );
+//                                                    sibling ptr           key                      rid
+const  int STRINGARRAYLEAFSIZE = ( Page::SIZE - sizeof( PageId ) ) / ( 10 * sizeof(char) + sizeof( RecordId ) );
 
 /**
  * @brief Number of key slots in B+Tree non-leaf for INTEGER key.
  */
-//                                                     level     extra pageNo         valid entry num         key       pageNo
-const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) - sizeof( int )) / ( sizeof( int ) + sizeof( PageId ) );
+//                                                     level     extra pageNo                  key       pageNo
+const  int INTARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( int ) + sizeof( PageId ) );
 
 /**
  * @brief Number of key slots in B+Tree leaf for DOUBLE key.
  */
-//                                                        level        extra pageNo      valid entry num          key            pageNo   -1 due to structure padding
-const  int DOUBLEARRAYNONLEAFSIZE = (( Page::SIZE - sizeof( int ) - sizeof( PageId ) - sizeof( int )) / ( sizeof( double ) + sizeof( PageId ) )) - 1;
+//                                                        level        extra pageNo                 key            pageNo   -1 due to structure padding
+const  int DOUBLEARRAYNONLEAFSIZE = (( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( sizeof( double ) + sizeof( PageId ) )) - 1;
 
 /**
  * @brief Number of key slots in B+Tree leaf for STRING key.
  */
-//                                                        level        extra pageNo    valid entry num              key                   pageNo
-const  int STRINGARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) - sizeof( int )) / ( 10 * sizeof(char) + sizeof( PageId ) );
+//                                                        level        extra pageNo             key                   pageNo
+const  int STRINGARRAYNONLEAFSIZE = ( Page::SIZE - sizeof( int ) - sizeof( PageId ) ) / ( 10 * sizeof(char) + sizeof( PageId ) );
 
 /**
  * @brief Structure to store a key-rid pair. It is used to pass the pair to functions that 
@@ -120,7 +120,7 @@ public:
  * a smaller rid.pageNo value.
 */
 template <class T>
-bool operator>( const RIDKeyPair<T>& r1, const RIDKeyPair<T>& r2 )
+bool operator<( const RIDKeyPair<T>& r1, const RIDKeyPair<T>& r2 )
 {
 	if( r1.key != r2.key )
 		return r1.key < r2.key;
@@ -156,11 +156,6 @@ struct IndexMetaInfo{
    * Page number of root page of the B+ Tree inside the file index file.
    */
 	PageId rootPageNo;
-
-  /*
-   * Check if the root node is leaf node or not
-   * */
-  	bool isRootLeafPage;
 };
 
 /*
@@ -174,10 +169,6 @@ at this level are just above the leaf nodes. Otherwise set to 0.
  * @brief Structure for all non-leaf nodes when the key is of INTEGER type.
 */
 struct NonLeafNodeInt{
-
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
   /**
    * Level of the node in the tree.
    */
@@ -192,16 +183,17 @@ struct NonLeafNodeInt{
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
 	PageId pageNoArray[ INTARRAYNONLEAFSIZE + 1 ];
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
  * @brief Structure for all non-leaf nodes when the key is of DOUBLE type.
 */
 struct NonLeafNodeDouble{
-
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
   /**
    * Level of the node in the tree.
    */
@@ -216,16 +208,17 @@ struct NonLeafNodeDouble{
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
 	PageId pageNoArray[ DOUBLEARRAYNONLEAFSIZE + 1 ];
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
  * @brief Structure for all non-leaf nodes when the key is of STRING type.
 */
 struct NonLeafNodeString{
-  
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
   /**
    * Level of the node in the tree.
    */
@@ -240,16 +233,17 @@ struct NonLeafNodeString{
    * Stores page numbers of child pages which themselves are other non-leaf/leaf nodes in the tree.
    */
 	PageId pageNoArray[ STRINGARRAYNONLEAFSIZE + 1 ];
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
  * @brief Structure for all leaf nodes when the key is of INTEGER type.
 */
 struct LeafNodeInt{
-
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
   /**
    * Stores keys.
    */
@@ -265,16 +259,17 @@ struct LeafNodeInt{
 	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
    */
 	PageId rightSibPageNo;
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
  * @brief Structure for all leaf nodes when the key is of DOUBLE type.
 */
 struct LeafNodeDouble{
-  
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
   /**
    * Stores keys.
    */
@@ -290,17 +285,17 @@ struct LeafNodeDouble{
 	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
    */
 	PageId rightSibPageNo;
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
  * @brief Structure for all leaf nodes when the key is of STRING type.
 */
 struct LeafNodeString{
-
-  /* stores the number of valid entry in this nodes
-   * */
-  	int validEntry_num;
-
   /**
    * Stores keys.
    */
@@ -316,6 +311,11 @@ struct LeafNodeString{
 	 * This linking of leaves allows to easily move from one leaf to the next leaf during index scan.
    */
 	PageId rightSibPageNo;
+
+  /**
+   * Count how many slots are occupied
+   */
+  int slot_occupied;
 };
 
 /**
@@ -335,6 +335,11 @@ class BTreeIndex {
    * Buffer Manager Instance.
    */
 	BufMgr	*bufMgr;
+
+  /**
+   * Root Page
+  */
+  Page    *rootP;
 
   /**
    * Page number of meta page.
@@ -365,6 +370,11 @@ class BTreeIndex {
    * Number of keys in non-leaf node, depending upon the type of key.
    */
 	int			nodeOccupancy;
+
+  /**
+   * Track if root is leaf
+   */
+	bool			rootIsLeaf;
 
 
 	// MEMBERS SPECIFIC TO SCANNING
@@ -457,9 +467,6 @@ class BTreeIndex {
 	~BTreeIndex();
 
 
-	// Create initial tree
-	const void createInitialTree(const std::string &relationName, BufMgr *bufMgrIn);
-
   /**
 	 * Insert a new entry using the pair <value,rid>. 
 	 * Start from root to recursively find out the leaf to insert the entry in. The insertion may cause splitting of leaf node.
@@ -471,52 +478,43 @@ class BTreeIndex {
 	**/
 	const void insertEntry(const void* key, const RecordId rid);
 
-	/* traverse the level and compare the key
- 	* */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const PageId lookForTargetLeaf(PageId &root_id, RIDKeyPair<T>* rid_pair);
-	
-	//generic copy function
-	const void copyToLeaf(Page* currentPage, int index, void *key, const RecordId &rid);
+
+  /**
+   * Insert a new entry in the leaf node
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+  **/
+  const void insertLeaf(const void *key, const RecordId rid);
+
+  /**
+   * Split a leaf node into two leaves and a parent
+   * @param newPage    New page pointer after split
+   * @param curPage    current page pointer before split
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+  **/
+  const void splitLeaf(Page* newPage, PageId newPageId, Page* curPage, 
+                       const void *key, const RecordId rid);
 
 
-	//generic copy function for non leaf
-	const void copyToNonLeaf(Page* currentPage, std::uint32_t index, void *key, const PageId &pid);
+  /**
+   * Insert a new entry using the pair <value, rid> from
+   * root to leaf. Helper function for insertEntry to make the 
+   * code more clean and self-contained.
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param page    Page pointer that starts with the root
+  **/
+  const void insertRecursive(const void *key, const RecordId rid,
+                            Page* page);
 
-	/* insert leaf pages
- 	*
- 	* */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const void insertLeafPage(PageId &firstLeaf_pageId, void *key, const RecordId &rid);
-	
-	/* Insert leaf if the leaf is full
-	 *
-	 * */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const void splitAndInsertLeafPage(PageId &firstLeaf_pageId, void *key, const RecordId rid);
-
-	/* Insert non leaf
- 	*
- 	* */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const void insertNonLeafPage(PageId &first_nonleafId, int &level);
-
-	/* Look for target non leaf
- 	*
- 	* */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const PageId lookForNonLeafAboveLeaf(PageId &root_id, void* key, int &target_level);
-
-	/* Insert non leaf if full
- 	*
- 	* */
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const void splitAndInsertNonLeafPage(PageId &first_nonleafId, PageId &newAlloc_pageId);
-
-	const void printTree();
-
-	template<class T, class T_leafFormat, class T_nonleafFormat>
-	const void printTreeFrom(PageId &pid);
+  /**
+   * Find the index of a pageid array where it matches certain expectation
+   * of the key being inserted
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param page    Page pointer that starts with the root
+  **/
+  PageId findPageNoInNonLeaf(const void *key, Page* page);
 
   /**
 	 * Begin a filtered scan of the index.  For instance, if the method is called 
@@ -534,6 +532,7 @@ class BTreeIndex {
 	 * @throws  NoSuchKeyFoundException If there is no key in the B+ tree that satisfies the scan criteria.
 	**/
 	const void startScan(const void* lowVal, const Operator lowOp, const void* highVal, const Operator highOp);
+
 
   /**
 	 * Fetch the record id of the next index entry that matches the scan.
