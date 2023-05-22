@@ -589,7 +589,7 @@ class BTreeIndex {
    * @param key 
 	 * @throws ScanNotInitializedException If no scan has been initialized.
 	**/
-  const bool BTreeIndex::checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key);
+  const bool checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key);
 	
 };
 
