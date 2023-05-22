@@ -374,7 +374,12 @@ class BTreeIndex {
   /**
    * Track if root is leaf
    */
-	bool			rootIsLeaf;
+	bool			InitLeaf;
+
+  /**
+   * Track how many nodes in total
+   */
+	bool			onlyRoot;
 
 
 	// MEMBERS SPECIFIC TO SCANNING
@@ -478,35 +483,60 @@ class BTreeIndex {
 	**/
 	const void insertEntry(const void* key, const RecordId rid);
 
+/**
+   * Insert a new entry using the pair <value, rid> from
+   * root to leaf. Helper function for insertEntry to make the 
+   * code more clean and self-contained.
+   * @param curPage
+   * @param curPageId
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param lastRecurId Check whether child is split after the recursion
+  **/
+  const void insertRecursive(Page* curPage, PageId curPageId, const void *key, 
+                            const RecordId rid, PageId& lastRecurId);
 
   /**
    * Insert a new entry in the leaf node
+   * @param curPage
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
   **/
-  const void insertLeaf(const void *key, const RecordId rid);
+  const void insertLeaf(Page* curPage, const void *key, const RecordId rid);
+
+  /**
+   * Insert a new entry in the nonleaf node
+   * @param curPage
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+  **/
+  const void insertNonLeaf(Page* curPage, const void *key, PageId pid);
 
   /**
    * Split a leaf node into two leaves and a parent
    * @param newPage    New page pointer after split
+   * @param newPageId  New page id after split
    * @param curPage    current page pointer before split
+   * @param curPageId
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param lastRecurId Check whether child is split after the recursion
   **/
   const void splitLeaf(Page* newPage, PageId newPageId, Page* curPage, 
-                       const void *key, const RecordId rid);
-
+                       PageId curPageId, const void *key, const RecordId rid,
+                       PageId& lastRecurId);
 
   /**
-   * Insert a new entry using the pair <value, rid> from
-   * root to leaf. Helper function for insertEntry to make the 
-   * code more clean and self-contained.
+   * Split a leaf node into two leaves and a parent
+   * @param newPage    New page pointer after split
+   * @param newPageId  New page id after split
+   * @param curPage    current page pointer before split
+   * @param curPageId
    * @param key			Key to insert, pointer to integer/double/char string
-   * @param rid			Record ID of a record whose entry is getting inserted into the index.
-   * @param page    Page pointer that starts with the root
+   * @param lastRecurId Check whether child is split after the recursion
   **/
-  const void insertRecursive(const void *key, const RecordId rid,
-                            Page* page);
+  const void splitNonLeaf(Page* newPage, PageId newPageId, Page* curPage, 
+                       PageId curPageId, const void *key, PageId& lastRecurId);
 
   /**
    * Find the index of a pageid array where it matches certain expectation
@@ -549,6 +579,17 @@ class BTreeIndex {
 	 * @throws ScanNotInitializedException If no scan has been initialized.
 	**/
 	const void endScan();
+
+  /**
+	 * Check the range between lowval and highval against key
+   * @param lowVal	Low value of range, pointer to integer / double / char string
+   * @param lowOp		Low operator (GT/GTE)
+   * @param highVal	High value of range, pointer to integer / double / char string
+   * @param highOp	High operator (LT/LTE)
+   * @param key 
+	 * @throws ScanNotInitializedException If no scan has been initialized.
+	**/
+  const bool BTreeIndex::checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key);
 	
 };
 
