@@ -431,10 +431,22 @@ class BTreeIndex {
   int heightTree;
 
   /*
-   *
+   * useful when recurse up
    */
-  PageId lastPid;
+  PageKeyPair<int>* recurPair;
   
+  /**
+   * Find out if the whole leaf page is full
+   * @param curPage The current Page we are checking
+  */
+  bool leafFull(Page *curPage);
+
+  /**
+   * Find out if the nonleaf page is full
+   * @param curPage The current Page we are checking
+  */
+  bool nodeFull(Page* curPage);
+
   /**
    * Recursive function to insert the index entry to the index file
    * @param curPage           The current Page we are checking
@@ -442,11 +454,10 @@ class BTreeIndex {
    * @param nodeIsLeaf        If the current page is a leaf node or nonleaf node
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
-   * @param newchildEntry     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
+   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
   const void insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
-                            PageKeyPair<int> *&newchildEntry,
-                            const void *key, const RecordId rid, PageId& lastRecurId);
+                            const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
   
   /**
    * Helper function to insert entry into a leaf node
@@ -458,34 +469,33 @@ class BTreeIndex {
   
   /**
    * Helper function to insert entry into a non leaf node
-   * @param nonleaf  Nonleaf node that need to be inserted into
-   * @param key			Key to insert, pointer to integer/double/char string
-   * @param lastPid	Record ID of a record whose entry is getting inserted into the recursive index.
+   * @param curPage  Nonleaf node that need to be inserted into
+   * @param recurPair		
    *
    */
-  const void insertNonLeaf(Page* curPage, PageKeyPair<int> *entry,
-                      const void *key, PageId& lastPid);
+  const void insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair);
 
   /**
    * Helper function to splitLeafNode when the leafNode is full
    * @param leaf          Leaf node that is full
    * @param leafPageNum   The number of page of that leaf
-   * @param newchildEntry The PageKeyPair that need to push up
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair The key-page pair useful for tracking recursion
   */
   const void splitLeaf(Page* curPage, PageId leafPageNum, 
-  PageKeyPair<int> *&newchildEntry, const void *key, const RecordId rid);
+  const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
 
   /**
    * Recursive function to insert the index entry to the index file
    * @param oldNode           the node that needs to be split
    * @param oldPageNum        PageId of the oldNode
-   * @param newchildEntry     A pageKeyPair that contains an entry that is pushed up after splitting a node;
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node;
    *                          The value gets updated to contain the new keyPair that needs to be pushed up;
   */
   const void splitNonLeaf(Page* curPage, PageId oldPageNum, 
-  PageKeyPair<int> *&newchildEntry, const void *key, PageId& lastPid);
+  const void *key, PageKeyPair<int> *&recurPair);
 
   /**
    * Helper function to find the next level of page for the key should be in. 
