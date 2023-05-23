@@ -184,10 +184,6 @@ struct NonLeafNodeInt{
    */
 	PageId pageNoArray[ INTARRAYNONLEAFSIZE + 1 ];
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
 
 /**
@@ -209,10 +205,6 @@ struct NonLeafNodeDouble{
    */
 	PageId pageNoArray[ DOUBLEARRAYNONLEAFSIZE + 1 ];
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
 
 /**
@@ -234,10 +226,6 @@ struct NonLeafNodeString{
    */
 	PageId pageNoArray[ STRINGARRAYNONLEAFSIZE + 1 ];
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
 
 /**
@@ -260,10 +248,6 @@ struct LeafNodeInt{
    */
 	PageId rightSibPageNo;
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
 
 /**
@@ -286,10 +270,6 @@ struct LeafNodeDouble{
    */
 	PageId rightSibPageNo;
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
 
 /**
@@ -312,11 +292,8 @@ struct LeafNodeString{
    */
 	PageId rightSibPageNo;
 
-  /**
-   * Count how many slots are occupied
-   */
-  int slot_occupied;
 };
+
 
 /**
  * @brief BTreeIndex class. It implements a B+ Tree index on a single attribute of a
@@ -325,11 +302,6 @@ struct LeafNodeString{
 class BTreeIndex {
 
  private:
-
-  /*
-   * the pageId when the root page hasn't been split TEST METHOD
-   */
-  PageId initialRootPageNum;
 
   /**
    * File object for the index file.
@@ -385,7 +357,6 @@ class BTreeIndex {
    * Track how many nodes in total
    */
 	bool			onlyRoot;
-
 
 	// MEMBERS SPECIFIC TO SCANNING
 
@@ -449,7 +420,93 @@ class BTreeIndex {
    */
 	Operator	highOp;
 
-	
+  /*
+   * the pageId when the root page hasn't been split
+   */
+  PageId initialRootPageNum;
+
+  /*
+   * Keep track of the height of tree
+   */
+  int heightTree;
+
+  /*
+   *
+   */
+  PageId lastPid;
+  
+  /**
+   * Recursive function to insert the index entry to the index file
+   * @param curPage           The current Page we are checking
+   * @param curPageNum        PageId of current Page
+   * @param nodeIsLeaf        If the current page is a leaf node or nonleaf node
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param newchildEntry     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
+  */
+  const void insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
+                            const RIDKeyPair<int> dataEntry, 
+                            PageKeyPair<int> *&newchildEntry,
+                            const void *key, const RecordId rid, PageId& lastRecurId);
+  
+  /**
+   * Helper function to insert entry into a leaf node
+   * @param curPage     leaf node that need to be inserted into
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   */
+  const void insertLeaf(Page* curPage, const void *key, const RecordId rid);
+  
+  /**
+   * Helper function to insert entry into a non leaf node
+   * @param nonleaf  Nonleaf node that need to be inserted into
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param lastPid	Record ID of a record whose entry is getting inserted into the recursive index.
+   *
+   */
+  const void insertNonLeaf(Page* curPage, PageKeyPair<int> *entry,
+                      const void *key, PageId& lastPid);
+
+  /**
+   * Helper function to splitLeafNode when the leafNode is full
+   * @param leaf          Leaf node that is full
+   * @param leafPageNum   The number of page of that leaf
+   * @param newchildEntry The PageKeyPair that need to push up
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+  */
+  const void splitLeaf(Page* curPage, PageId leafPageNum, 
+  PageKeyPair<int> *&newchildEntry, const void *key, const RecordId rid);
+
+  /**
+   * Recursive function to insert the index entry to the index file
+   * @param oldNode           the node that needs to be split
+   * @param oldPageNum        PageId of the oldNode
+   * @param newchildEntry     A pageKeyPair that contains an entry that is pushed up after splitting a node;
+   *                          The value gets updated to contain the new keyPair that needs to be pushed up;
+  */
+  const void splitNonLeaf(Page* curPage, PageId oldPageNum, 
+  PageKeyPair<int> *&newchildEntry, const void *key, PageId& lastPid);
+
+  /**
+   * Helper function to find the next level of page for the key should be in. 
+   * @param curPage       The current Page we are checking
+   * @param nextNodenum   Return value for the next level page ID
+   * @param key           The Key we are checking
+  */
+  const void findPageNoInNonLeaf(NonLeafNodeInt *curPage, PageId &nextNodenum, const void *key);
+
+  /**
+   * Helper function to check if the key is satisfies
+   * @param lowVal   Low value of range, pointer to integer / double / char string
+   * @param lowOp    Low operator (GT/GTE)
+   * @param highVal  High value of range, pointer to integer / double / char string
+   * @param highOp   High operator (LT/LTE)
+   * @param val      Value of the key
+   * @return True if satisfies False if not
+   */
+  const bool checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key); 
+
  public:
 
   /**
@@ -488,68 +545,6 @@ class BTreeIndex {
 	**/
 	const void insertEntry(const void* key, const RecordId rid);
 
-/**
-   * Insert a new entry using the pair <value, rid> from
-   * root to leaf. Helper function for insertEntry to make the 
-   * code more clean and self-contained.
-   * @param curPage
-   * @param curPageId
-   * @param key			Key to insert, pointer to integer/double/char string
-   * @param rid			Record ID of a record whose entry is getting inserted into the index.
-   * @param lastRecurId Check whether child is split after the recursion
-  **/
-  const void insertRecursive(Page* curPage, PageId curPageId, const void *key, 
-                            const RecordId rid, PageId& lastRecurId);
-
-  // /**
-  //  * Insert a new entry in the leaf node
-  //  * @param curPage
-  //  * @param key			Key to insert, pointer to integer/double/char string
-  //  * @param rid			Record ID of a record whose entry is getting inserted into the index.
-  // **/
-  // const void insertLeaf(Page* curPage, const void *key, const RecordId rid);
-
-  // /**
-  //  * Insert a new entry in the nonleaf node
-  //  * @param curPage
-  //  * @param key			Key to insert, pointer to integer/double/char string
-  //  * @param rid			Record ID of a record whose entry is getting inserted into the index.
-  // **/
-  // const void insertNonLeaf(Page* curPage, const void *key, PageId pid);
-
-  // /**
-  //  * Split a leaf node into two leaves and a parent
-  //  * @param newPage    New page pointer after split
-  //  * @param newPageId  New page id after split
-  //  * @param curPage    current page pointer before split
-  //  * @param curPageId
-  //  * @param key			Key to insert, pointer to integer/double/char string
-  //  * @param rid			Record ID of a record whose entry is getting inserted into the index.
-  //  * @param lastRecurId Check whether child is split after the recursion
-  // **/
-  // const void splitLeaf(Page* newPage, PageId newPageId, Page* curPage, 
-  //                      PageId curPageId, const void *key, const RecordId rid,
-  //                      PageId& lastRecurId);
-
-  // /**
-  //  * Split a leaf node into two leaves and a parent
-  //  * @param newPage    New page pointer after split
-  //  * @param newPageId  New page id after split
-  //  * @param curPage    current page pointer before split
-  //  * @param curPageId
-  //  * @param key			Key to insert, pointer to integer/double/char string
-  //  * @param lastRecurId Check whether child is split after the recursion
-  // **/
-  // const void splitNonLeaf(Page* newPage, PageId newPageId, Page* curPage, 
-  //                      PageId curPageId, const void *key, PageId& lastRecurId);
-
-  /**
-   * Find the index of a pageid array where it matches certain expectation
-   * of the key being inserted
-   * @param key			Key to insert, pointer to integer/double/char string
-   * @param page    Page pointer that starts with the root
-  **/
-  PageId findPageNoInNonLeaf(const void *key, Page* page);
 
   /**
 	 * Begin a filtered scan of the index.  For instance, if the method is called 
@@ -585,35 +580,6 @@ class BTreeIndex {
 	**/
 	const void endScan();
 
-  /**
-	 * Check the range between lowval and highval against key
-   * @param lowVal	Low value of range, pointer to integer / double / char string
-   * @param lowOp		Low operator (GT/GTE)
-   * @param highVal	High value of range, pointer to integer / double / char string
-   * @param highOp	High operator (LT/LTE)
-   * @param key 
-	 * @throws ScanNotInitializedException If no scan has been initialized.
-	**/
-  const bool checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key);
-
-
-
-
-
-
-
-
-
-
-
-  const void insert(Page *curPage, PageId curPageNum, bool nodeIsLeaf, const RIDKeyPair<int> dataEntry, PageKeyPair<int> *&newchildEntry);
-  const void findNextNonLeafNode(NonLeafNodeInt *curPage, PageId &nextNodenum, int key);
-  const void insertNonLeaf(NonLeafNodeInt *nonleaf, PageKeyPair<int> *entry);
-  const void splitNonLeaf(NonLeafNodeInt *oldNode, PageId oldPageNum, PageKeyPair<int> *&newchildEntry);
-  const void splitLeaf(LeafNodeInt *leaf, PageId leafPageNum, PageKeyPair<int> *&newchildEntry, const RIDKeyPair<int> dataEntry);
-  const void insertLeaf(LeafNodeInt *leaf, RIDKeyPair<int> entry);
-  const void updateRoot(PageId firstPageInRoot, PageKeyPair<int> *newchildEntry);
-	
 };
 
 }
