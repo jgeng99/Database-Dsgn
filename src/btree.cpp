@@ -15,6 +15,7 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
+#include <vector>
 
 
 //#define DEBUG
@@ -63,8 +64,6 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
     this->bufMgr = bufMgrIn;
     this->attrByteOffset = attrByteOffset;
     this->scanExecuting = false;
-    this->InitLeaf = true;
-    this->onlyRoot = true;
 
     // initialize pointers for first page of blobfile
     BlobFile* check_index;
@@ -173,17 +172,12 @@ BTreeIndex::~BTreeIndex()
 
 const void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-  RIDKeyPair<int> dataEntry;
-  dataEntry.set(rid, *((int *)key));
-  // root
-  Page* root;
-  // PageId rootPageNum;
-  bufMgr->readPage(file, rootPageNum, root);
+  bufMgr->readPage(file, rootPageNum, rootP);
   recurPair = nullptr;
 
   if (initialRootPageNum == rootPageNum) {
-      insertRecursive(root, rootPageNum, true, key, rid, recurPair);
-  } else insertRecursive(root, rootPageNum, false, key, rid, recurPair);
+      insertRecursive(rootP, rootPageNum, true, key, rid, recurPair);
+  } else insertRecursive(rootP, rootPageNum, false, key, rid, recurPair);
 }
 
 // -----------------------------------------------------------------------------
@@ -252,13 +246,13 @@ const void BTreeIndex::insertIntoLeaf(Page *curPage, PageId curPageNum,
       const void *key, const RecordId rid, PageKeyPair<int> *&recurPair) 
 {
     if (!leafFull(curPage))
-    {
+    { // page is not full
         insertLeaf(curPage, key, rid);
         bufMgr->unPinPage(file, curPageNum, true);
         recurPair = nullptr;
     }
     else
-    {
+    { // page is full, need to split
         splitLeaf(curPage, curPageNum, key, rid, recurPair);
     }
 }
@@ -269,13 +263,12 @@ const void BTreeIndex::insertIntoLeaf(Page *curPage, PageId curPageNum,
 
 const void BTreeIndex::insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<int> *&recurPair) 
 {
-    // if the curpage is not full
+    // if page not full
     if (!nodeFull(curPage))
     {
-        // insert the newchildEntry to curpage
+        // insert recurPair to it
         insertNonLeaf(curPage, recurPair);
         recurPair = nullptr;
-        // finish the insert process, unpin current page
         bufMgr->unPinPage(file, curPageNum, true);
     }
     else
@@ -328,7 +321,7 @@ const void BTreeIndex::insertLeaf(Page* curPage, const void *key, const RecordId
 // BTreeIndex::insertNonLeaf
 // -----------------------------------------------------------------------------
 
-const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *entry)
+const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair)
 {
     NonLeafNodeInt* nonLeaf = (NonLeafNodeInt*) curPage;
 
@@ -340,11 +333,12 @@ const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *entry)
     }
 
     // find insertion point
-    int start = 0, end = validKeys - 1;
+    int start = 0;
+    int end = validKeys - 1;
     while(start <= end) {
         // use binary search to save runtime because sorted
         int mid = start + (end - start) / 2;
-        if(nonLeaf->keyArray[mid] < entry->key) {
+        if(nonLeaf->keyArray[mid] < recurPair->key) {
           start = mid + 1;
         } else {
           end = mid - 1;
@@ -359,85 +353,101 @@ const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *entry)
     }
 
     // insert the new key and corresponding page number
-    nonLeaf->keyArray[insertionPoint] = entry->key;
-    nonLeaf->pageNoArray[insertionPoint + 1] = entry->pageNo;
+    nonLeaf->keyArray[insertionPoint] = recurPair->key;
+    nonLeaf->pageNoArray[insertionPoint + 1] = recurPair->pageNo;
 }
 
 // -----------------------------------------------------------------------------
 // BTreeIndex::splitLeaf
 // -----------------------------------------------------------------------------
 
-const void BTreeIndex::splitLeaf(Page* curPage, PageId leafPageNum, 
-          const void *key, const RecordId rid, PageKeyPair<int> *&newchildEntry)
+const void BTreeIndex::splitLeaf(Page* curPage, PageId leafPageId, 
+          const void *key, const RecordId rid, PageKeyPair<int>*& recurPair)
 {
-  LeafNodeInt* leafInt = (LeafNodeInt*) curPage;
-  int keyInt = *(int*) key;
-  PageId newPageNum;
-  Page *newPage;
-  bufMgr->allocPage(file, newPageNum, newPage);
-  LeafNodeInt *newLeafNode = (LeafNodeInt *)newPage;
+    PageId rightId;
+    Page* rightPage;
+    bufMgr->allocPage(file, rightId, rightPage);
 
-  int mid = (leafOccupancy)/2;
-  // odd number of keys
-  if (leafOccupancy %2 == 1 && keyInt > leafInt->keyArray[mid])
-  {
-    mid = mid + 1;
-  }
-  // copy half the page to newLeafNode
-  for(int i = mid; i < leafOccupancy; i++)
-  {
-    newLeafNode->keyArray[i-mid] = leafInt->keyArray[i];
-    newLeafNode->ridArray[i-mid] = leafInt->ridArray[i];
-    leafInt->keyArray[i] = 0;
-    leafInt->ridArray[i].page_number = 0;
-  }
+    // implement leaf split
+    updateMidLeaf(curPage, rightPage, rightId, key, rid, recurPair);
+    LeafNodeInt* rightNode = (LeafNodeInt*) rightPage;
 
-  
-  if (keyInt < leafInt->keyArray[mid-1])
-  {
-    insertLeaf(curPage, key, rid);
-  }
-  else
-  {
-    insertLeaf(newPage, key, rid);
-  }
+    // create a new root node if the current node is a leaf
+    if (leafPageId == rootPageNum)
+    {
+        // create a new root 
+        PageId newParentId;
+        Page* newParent;
+        bufMgr->allocPage(file, newParentId, newParent);
+        NonLeafNodeInt* newParentPage = (NonLeafNodeInt*) newParent;
 
-  // update sibling pointer
-  newLeafNode->rightSibPageNo = leafInt->rightSibPageNo;
-  leafInt->rightSibPageNo = newPageNum;
+        // level is guaranteed to be one above leaf as given
+        newParentPage->level = 1;
 
-  // the smallest key from second page as the new child entry
-  newchildEntry = new PageKeyPair<int>();
-  PageKeyPair<int> newKeyPair;
-  newKeyPair.set(newPageNum, newLeafNode->keyArray[0]);
-  newchildEntry = &newKeyPair;
-  bufMgr->unPinPage(file, leafPageNum, true);
-  bufMgr->unPinPage(file, newPageNum, true);
+        // set its page points to the newly split leaves
+        newParentPage->pageNoArray[0] = leafPageId;
+        newParentPage->pageNoArray[1] = rightId;
 
-  // if curr page is root
-  if (leafPageNum == rootPageNum)
-  {
-    // create a new root 
-    PageId newRootPageNum;
-    Page *newRoot;
-    bufMgr->allocPage(file, newRootPageNum, newRoot);
-    NonLeafNodeInt *newRootPage = (NonLeafNodeInt *)newRoot;
+        // set the key of parent to be the right first key by default
+        newParentPage->keyArray[0] = rightNode->keyArray[0];
 
-    // update metadata
-    newRootPage->level = 1;
-    newRootPage->pageNoArray[0] = leafPageNum;
-    newRootPage->pageNoArray[1] = newPageNum;
-    newRootPage->keyArray[0] = newLeafNode->keyArray[0];
+        // update header page
+        Page *tempMeta;
+        this->bufMgr->readPage(this->file, this->headerPageNum, tempMeta);
+        IndexMetaInfo* metaIndex = (IndexMetaInfo*)tempMeta;
+        metaIndex->rootPageNo = newParentId;
+        this->rootPageNum = newParentId;
+        
+        // unpin unused pages
+        this->bufMgr->unPinPage(this->file, this->headerPageNum, true);
+        this->bufMgr->unPinPage(this->file, newParentId, true);
+    }
 
-    Page *meta;
-    bufMgr->readPage(file, headerPageNum, meta);
-    IndexMetaInfo *metaPage = (IndexMetaInfo *)meta;
-    metaPage->rootPageNo = newRootPageNum;
-    this->rootPageNum = newRootPageNum;
-    // unpin unused page
-    bufMgr->unPinPage(file, headerPageNum, true);
-    bufMgr->unPinPage(file, newRootPageNum, true);
-  }
+    // Unpin unused pages
+    this->bufMgr->unPinPage(this->file, leafPageId, true);
+    this->bufMgr->unPinPage(this->file, rightId, true);
+}
+
+// -----------------------------------------------------------------------------
+// BTreeIndex::splitLeaf
+// -----------------------------------------------------------------------------
+
+const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rightId,
+      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair)
+{
+    LeafNodeInt* leftNode = (LeafNodeInt*) leftPage;
+    LeafNodeInt* rightNode = (LeafNodeInt*) rightPage;
+    int keyOps = *(int*) key;
+
+    // determine the index of the middle key
+    int mid = leafOccupancy / 2;
+
+    // move the latter half of the keys and rids to the new leaf
+    for (int i = 0; i < leafOccupancy-mid; i++) {
+        rightNode->keyArray[i] = leftNode->keyArray[i+mid];
+        rightNode->ridArray[i] = leftNode->ridArray[i+mid];
+
+        // erase the moved entries from left node
+        leftNode->keyArray[i+mid] = 0;
+        leftNode->ridArray[i+mid].page_number = 0;
+    }
+
+    if (keyOps < rightNode->keyArray[0])
+    {
+        insertLeaf(leftPage, key, rid);
+    }
+    else
+    {
+        insertLeaf(rightPage, key, rid);
+    }
+
+    // update the sibling pointers
+    rightNode->rightSibPageNo = leftNode->rightSibPageNo;
+    leftNode->rightSibPageNo = rightId;
+
+    // update recurPair for the parent level
+    recurPair = new PageKeyPair<int>();
+    recurPair->set(rightId, rightNode->keyArray[0]);
 }
 
 // -----------------------------------------------------------------------------

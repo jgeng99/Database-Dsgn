@@ -348,15 +348,6 @@ class BTreeIndex {
    */
 	int			nodeOccupancy;
 
-  /**
-   * Track if root is leaf
-   */
-	bool			InitLeaf;
-
-  /**
-   * Track how many nodes in total
-   */
-	bool			onlyRoot;
 
 	// MEMBERS SPECIFIC TO SCANNING
 
@@ -503,7 +494,18 @@ class BTreeIndex {
    * @param recurPair The key-page pair useful for tracking recursion
   */
   const void splitLeaf(Page* curPage, PageId leafPageNum, 
-  const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+          const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+
+  /**
+   * Helper function to splitLeafNode when the leafNode is full
+   * @param leaf          Leaf node that is full
+   * @param leafPageNum   The number of page of that leaf
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair The key-page pair useful for tracking recursion
+  */
+  const void updateMidLeaf(Page* leftPage, Page* rightPage, PageId rightId,
+      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
 
   /**
    * Recursive function to insert the index entry to the index file
