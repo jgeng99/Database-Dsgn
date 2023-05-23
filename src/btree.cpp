@@ -503,7 +503,7 @@ const void BTreeIndex::updateMidNode(Page* leftPage, Page* rightPage, PageId rig
     NonLeafNodeInt* leftNode = (NonLeafNodeInt*) leftPage;
     NonLeafNodeInt* rightNode = (NonLeafNodeInt*) rightPage;
 
-    // determine the index of the middle key
+    // determine the index of the middle key, increment by one because push up
     int mid = leafOccupancy / 2 + 1;
 
     // move the latter half of the keys and rids to the new leaf
