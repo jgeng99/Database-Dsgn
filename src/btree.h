@@ -448,6 +448,25 @@ class BTreeIndex {
   bool nodeFull(Page* curPage);
 
   /**
+   * Helper function for insertRecursive at leaf page
+   * @param curPage           The current Page we are checking
+   * @param curPageNum        PageId of current Page
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
+  */
+  const void insertIntoLeaf(Page *curPage, PageId curPageNum,
+      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+
+  /**
+   * Helper function for insertRecursive at recursive step
+   * @param curPage           The current Page we are checking
+   * @param curPageNum        PageId of current Page
+   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
+  */
+  const void insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<int> *&recurPair);
+
+  /**
    * Recursive function to insert the index entry to the index file
    * @param curPage           The current Page we are checking
    * @param curPageNum        PageId of current Page
@@ -494,8 +513,7 @@ class BTreeIndex {
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node;
    *                          The value gets updated to contain the new keyPair that needs to be pushed up;
   */
-  const void splitNonLeaf(Page* curPage, PageId oldPageNum, 
-  const void *key, PageKeyPair<int> *&recurPair);
+  const void splitNonLeaf(Page* curPage, PageId oldPageNum, PageKeyPair<int> *&recurPair);
 
   /**
    * Helper function to find the next level of page for the key should be in. 
