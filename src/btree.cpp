@@ -183,7 +183,7 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid)
   this->lastPid = 0;
 
   insertRecursive(root, rootPageNum, initialRootPageNum == rootPageNum ? true : false, 
-                  dataEntry, newchildEntry, key, rid, this->lastPid);
+                  newchildEntry, key, rid, this->lastPid);
 }
 
 // -----------------------------------------------------------------------------
@@ -191,7 +191,6 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 // -----------------------------------------------------------------------------
 
 const void BTreeIndex::insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
-                const RIDKeyPair<int> dataEntry, 
                 PageKeyPair<int> *&newchildEntry,
                 const void *key, const RecordId rid, PageId& lastPid)
 {
@@ -219,7 +218,7 @@ const void BTreeIndex::insertRecursive(Page *curPage, PageId curPageNum, bool no
     findPageNoInNonLeaf(curNode, nextNodeNum, key);
     bufMgr->readPage(file, nextNodeNum, nextPage);
     nodeIsLeaf = curNode->level == 1;
-    insertRecursive(nextPage, nextNodeNum, nodeIsLeaf, dataEntry, newchildEntry,
+    insertRecursive(nextPage, nextNodeNum, nodeIsLeaf, newchildEntry,
                     key, rid, this->lastPid);
     
     // no split in child, just return

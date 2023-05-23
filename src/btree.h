@@ -445,7 +445,6 @@ class BTreeIndex {
    * @param newchildEntry     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
   const void insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
-                            const RIDKeyPair<int> dataEntry, 
                             PageKeyPair<int> *&newchildEntry,
                             const void *key, const RecordId rid, PageId& lastRecurId);
   
