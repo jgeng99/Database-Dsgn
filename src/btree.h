@@ -537,15 +537,16 @@ class BTreeIndex {
   const void findPageNoInNonLeaf(NonLeafNodeInt *curPage, PageId &nextNodenum, const void *key);
 
   /**
-   * Helper function to check if the key is satisfies
-   * @param lowVal   Low value of range, pointer to integer / double / char string
-   * @param lowOp    Low operator (GT/GTE)
-   * @param highVal  High value of range, pointer to integer / double / char string
-   * @param highOp   High operator (LT/LTE)
-   * @param val      Value of the key
-   * @return True if satisfies False if not
-   */
-  const bool checkKey(int lowVal, const Operator lowOp, int highVal, const Operator highOp, int key); 
+   * Help reach to the leftmost leaf in a tree using findPageNoInNonLeaf iteratively
+   * @param lowVal Low value of range, pointer to integer / double / char string
+  */
+  const void findStartLeaf(const void* lowVal);
+
+  /**
+   * Help match the earliest encountered predicate; lower bound
+   * @param keyFound Determine whether a key has been found or not
+  */
+  const void foundKeyLeaf(bool& keyFound);
 
  public:
 
