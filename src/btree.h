@@ -546,7 +546,7 @@ class BTreeIndex {
    * Help match the earliest encountered predicate; lower bound
    * @param keyFound Determine whether a key has been found or not
   */
-  const void foundKeyLeaf(bool& keyFound);
+  const void findKeyLeaf(bool& keyFound);
 
  public:
 

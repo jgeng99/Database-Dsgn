@@ -15,7 +15,6 @@
 #include "exceptions/index_scan_completed_exception.h"
 #include "exceptions/file_not_found_exception.h"
 #include "exceptions/end_of_file_exception.h"
-#include <vector>
 
 
 //#define DEBUG
@@ -203,10 +202,10 @@ const void BTreeIndex::insertRecursive(Page *curPage, PageId curPageNum, bool no
       nodeIsLeaf = curNode->level == 1;
       insertRecursive(nextPage, nextNodeNum, nodeIsLeaf, key, rid, recurPair);
     
-    if (recurPair) {
-        insertIntoNode(curPage, curPageNum, recurPair);
-    }
-    else bufMgr->unPinPage(file, curPageNum, false);
+      if (recurPair) {
+          insertIntoNode(curPage, curPageNum, recurPair);
+      }
+      else bufMgr->unPinPage(file, curPageNum, false);
   }
 }
 
@@ -299,9 +298,9 @@ const void BTreeIndex::insertLeaf(Page* curPage, const void *key, const RecordId
         // use binary search to save runtime because sorted
         int mid = start + (end - start) / 2;
         if(leafInt->keyArray[mid] < keyInt) {
-          start = mid + 1;
+            start = mid + 1;
         } else {
-          end = mid - 1;
+            end = mid - 1;
         }
     }
     int insertionPoint = start;
@@ -339,9 +338,9 @@ const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair)
         // use binary search to save runtime because sorted
         int mid = start + (end - start) / 2;
         if(nonLeaf->keyArray[mid] < recurPair->key) {
-          start = mid + 1;
+            start = mid + 1;
         } else {
-          end = mid - 1;
+            end = mid - 1;
         }
     }
     int insertionPoint = start;
@@ -420,7 +419,7 @@ const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rig
     int keyOps = *(int*) key;
 
     // determine the index of the middle key
-    int mid = leafOccupancy / 2 + 1;
+    int mid = leafOccupancy / 2;
 
     // move the latter half of the keys and rids to the new leaf
     for (int i = 0; i < leafOccupancy-mid; i++) {
@@ -432,6 +431,7 @@ const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rig
         leftNode->ridArray[i+mid].page_number = 0;
     }
 
+    // insert and copy up
     if (keyOps < rightNode->keyArray[0]) {
         insertLeaf(leftPage, key, rid);
     }
@@ -512,6 +512,7 @@ const void BTreeIndex::updateMidNode(Page* leftPage, Page* rightPage, PageId rig
         rightNode->pageNoArray[i] = leftNode->pageNoArray[i+mid+1];
 
         // erase the moved entries from left node
+        leftNode->keyArray[i+mid] = 0;
         leftNode->pageNoArray[i+mid+1] = 0;
     }
 
@@ -582,7 +583,7 @@ const void BTreeIndex::startScan(const void* lowValParm,
         }
         // find the smallest one that meet the predicate on leaf
         bool keyFound = false;
-        this->foundKeyLeaf(keyFound);
+        this->findKeyLeaf(keyFound);
         // std::cout <<"--------"<<found<<"--------"<<std::endl;
         if (!keyFound) {
             bufMgr->unPinPage(file, currentPageNum, false);
@@ -624,7 +625,7 @@ const void BTreeIndex::findStartLeaf(const void* lowValParm) {
 // BTreeIndex::foundKey
 // -----------------------------------------------------------------------------
 
-const void BTreeIndex::foundKeyLeaf(bool& keyFound) {
+const void BTreeIndex::findKeyLeaf(bool& keyFound) {
     // find the smallest one that meet the predicate
     LeafNodeInt* currentNode = (LeafNodeInt *) currentPageData;
 
