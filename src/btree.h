@@ -487,7 +487,7 @@ class BTreeIndex {
 
   /**
    * Helper function to splitLeafNode when the leafNode is full
-   * @param leaf          Leaf node that is full
+   * @param curPage          Leaf page that is full
    * @param leafPageNum   The number of page of that leaf
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
@@ -498,8 +498,9 @@ class BTreeIndex {
 
   /**
    * Helper function to splitLeafNode when the leafNode is full
-   * @param leaf          Leaf node that is full
-   * @param leafPageNum   The number of page of that leaf
+   * @param leftPage          Left page that is full
+   * @param rightPage   Right page after split 
+   * @param rightId     Right page id
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair The key-page pair useful for tracking recursion
@@ -517,6 +518,16 @@ class BTreeIndex {
   */
   const void splitNonLeaf(Page* curPage, PageId oldPageNum, PageKeyPair<int> *&recurPair);
 
+  /**
+   * Helper function to splitNonLeaf when the NonleafNode is full
+   * @param leftPage          Left page that is full
+   * @param rightPage   Right page after split 
+   * @param rightId     Right page id
+   * @param recurPair The key-page pair useful for tracking recursion
+  */
+  const void updateMidNode(Page* leftPage, Page* rightPage, PageId rightId,
+                  PageKeyPair<int> *&recurPair);
+  
   /**
    * Helper function to find the next level of page for the key should be in. 
    * @param curPage       The current Page we are checking
