@@ -409,7 +409,7 @@ const void BTreeIndex::splitLeaf(Page* curPage, PageId leafPageId,
 }
 
 // -----------------------------------------------------------------------------
-// BTreeIndex::splitLeaf
+// BTreeIndex::updateMidLeaf
 // -----------------------------------------------------------------------------
 
 const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rightId,
@@ -493,7 +493,7 @@ const void BTreeIndex::splitNonLeaf(Page* curPage, PageId leafPageId, PageKeyPai
 }
 
 // -----------------------------------------------------------------------------
-// BTreeIndex::splitLeaf
+// BTreeIndex::updateMidNode
 // -----------------------------------------------------------------------------
 
 const void BTreeIndex::updateMidNode(Page* leftPage, Page* rightPage, PageId rightId,
