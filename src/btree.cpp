@@ -1166,7 +1166,7 @@ const void BTreeIndex::findPageNoInNonLeaf(Page *curPage, PageId &nextNodeNum, c
     }
     else {
         NonLeafNodeString* nonLeafNode = (NonLeafNodeString*) curPage;
-        std::string keyOp = *(std::string*) key;
+        std::string keyOp = std::string(static_cast<const char*>(key)); 
         for (int i=nodeOccupancy-1; i>=0; i--) {
             if (nonLeafNode->pageNoArray[i]) {
                 if (!i || nonLeafNode->keyArray[i-1]<keyOp) {
@@ -1239,8 +1239,9 @@ const void BTreeIndex::startScan(const void* lowValParm,
     }
     else {
         // sanity check
-        this->lowValString = *(std::string*)lowValParm;
-        this->highValString = *(std::string*)highValParm;
+        this->lowValString = std::string(static_cast<const char*>(lowValParm));
+        this->highValString = std::string(static_cast<const char*>(highValParm));
+
         if (lowValString>highValString) throw BadScanrangeException();
         this->lowOp = lowOpParm;
         this->highOp = highOpParm;
@@ -1427,6 +1428,7 @@ const void BTreeIndex::findKeyLeaf(bool& keyFound) {
         while ((currentNode->ridArray[0].page_number)) {
             // search key on one page
             for(int i = 0; i < leafOccupancy; i++) {
+                // std::string(static_cast<const char*>(lowValParm))
                 std::string key = currentNode->keyArray[i];
 
                 // if key has been inserted
@@ -1435,11 +1437,12 @@ const void BTreeIndex::findKeyLeaf(bool& keyFound) {
                 }
 
                 // find key
-                if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) && 
-                            ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
+                if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) 
+                        && ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
                     this->nextEntry = i;
                     this->scanExecuting = true;
                     keyFound = true;
+                    // std::cout<<"the starting key is: "<<key<<std::endl<<std::endl;
                     return;
                 }
 
@@ -1498,7 +1501,6 @@ const void BTreeIndex::scanNext(RecordId& outRid)
         if (((lowOp==GT && key>lowValInt) || (lowOp==GTE && key>=lowValInt)) && 
                 ((highOp==LT && key<highValInt) || (highOp==LTE && key<=highValInt))) {
             outRid = currentNode->ridArray[this->nextEntry];
-            // Incrment nextEntry
             this->nextEntry++;
             return;
         }
@@ -1531,7 +1533,6 @@ const void BTreeIndex::scanNext(RecordId& outRid)
         if (((lowOp==GT && key>lowValDouble) || (lowOp==GTE && key>=lowValDouble)) && 
                 ((highOp==LT && key<highValDouble) || (highOp==LTE && key<=highValDouble))) {
             outRid = currentNode->ridArray[this->nextEntry];
-            // Incrment nextEntry
             this->nextEntry++;
             return;
         }
@@ -1564,7 +1565,6 @@ const void BTreeIndex::scanNext(RecordId& outRid)
         if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) && 
                 ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
             outRid = currentNode->ridArray[this->nextEntry];
-            // Incrment nextEntry
             this->nextEntry++;
             return;
         }
