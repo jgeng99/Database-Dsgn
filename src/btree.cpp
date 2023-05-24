@@ -681,32 +681,37 @@ const void BTreeIndex::scanNext(RecordId& outRid)
 	
 	LeafNodeInt* currentNode = (LeafNodeInt *) currentPageData;
 
-    if(currentNode->ridArray[nextEntry].page_number == 0 or nextEntry == leafOccupancy) {
-        // Unpin page and read papge
-        bufMgr->unPinPage(file, currentPageNum, false);
-        // No more next leaf
-        if(currentNode->rightSibPageNo == 0) {
-            throw IndexScanCompletedException();
+    if (nextEntry<leafOccupancy) {
+        if (currentNode->ridArray[nextEntry].page_number) {
+            int key = currentNode->keyArray[nextEntry];
+            if (((lowOp==GT && key>lowValInt) || (lowOp==GTE && key>=lowValInt)) && 
+                    ((highOp==LT && key<highValInt) || (highOp==LTE && key<=highValInt))) {
+                outRid = currentNode->ridArray[nextEntry];
+                nextEntry++;
+                return;
+            }
         }
-        currentPageNum = currentNode->rightSibPageNo;
-        bufMgr->readPage(file, currentPageNum, currentPageData);
-        currentNode = (LeafNodeInt *) currentPageData;
-        // Reset nextEntry
-        nextEntry = 0;
+        else if (!currentNode->rightSibPageNo) throw IndexScanCompletedException();
     }
- 
-    // Check  if rid satisfy
+
+    // change to right leaf
+    bufMgr->unPinPage(file, currentPageNum, false);
+    currentPageNum = currentNode->rightSibPageNo;
+    bufMgr->readPage(file, currentPageNum, currentPageData);
+    currentNode = (LeafNodeInt *) currentPageData;
+    nextEntry = 0;
+
+    // check again
     int key = currentNode->keyArray[nextEntry];
     if (((lowOp==GT && key>lowValInt) || (lowOp==GTE && key>=lowValInt)) && 
             ((highOp==LT && key<highValInt) || (highOp==LTE && key<=highValInt))) {
         outRid = currentNode->ridArray[nextEntry];
         // Incrment nextEntry
         nextEntry++;
-        // If current page has been scanned to its entirety
+        return;
     }
-    else {
-        throw IndexScanCompletedException();
-    }
+
+    throw IndexScanCompletedException();
 }
 
 // -----------------------------------------------------------------------------
@@ -715,17 +720,9 @@ const void BTreeIndex::scanNext(RecordId& outRid)
 
 const void BTreeIndex::endScan() 
 {
-  if(!scanExecuting)
-  {
-    throw ScanNotInitializedException();
-  }
-  scanExecuting = false;
-  // Unpin page
-  bufMgr->unPinPage(file, currentPageNum, false);
-  // Reset variable
-  currentPageData = nullptr;
-  currentPageNum = static_cast<PageId>(-1);
-  nextEntry = -1;
+    if(!scanExecuting) throw ScanNotInitializedException();
+    if (this->currentPageNum) bufMgr->unPinPage(file, currentPageNum, false);
+    this->scanExecuting = false;
 }
 
 }
