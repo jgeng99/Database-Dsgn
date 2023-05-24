@@ -69,7 +69,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
     IndexMetaInfo* blob_meta;
     try {
         // file exists
-		    check_index = new BlobFile(outIndexName, false);
+		check_index = new BlobFile(outIndexName, false);
         this->headerPageNum = this->file->getFirstPageNo();
         this->scanExecuting = false; // no need to scan
         bool flush = false;
@@ -171,12 +171,12 @@ BTreeIndex::~BTreeIndex()
 
 const void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-  bufMgr->readPage(file, rootPageNum, rootP);
-  recurPair = nullptr;
+	this->bufMgr->readPage(this->file, this->rootPageNum, this->rootP);
+	this->recurPair = nullptr;
 
-  if (initialRootPageNum == rootPageNum) {
-      insertRecursive(rootP, rootPageNum, true, key, rid, recurPair);
-  } else insertRecursive(rootP, rootPageNum, false, key, rid, recurPair);
+	if (initialRootPageNum == rootPageNum) {
+		this->insertRecursive(this->rootP, this->rootPageNum, true, key, rid, this->recurPair);
+	} else this->insertRecursive(this->rootP, this->rootPageNum, false, key, rid, this->recurPair);
 }
 
 // -----------------------------------------------------------------------------
@@ -627,44 +627,46 @@ const void BTreeIndex::findStartLeaf(const void* lowValParm) {
 
 const void BTreeIndex::findKeyLeaf(bool& keyFound) {
     // find the smallest one that meet the predicate
-    LeafNodeInt* currentNode = (LeafNodeInt *) currentPageData;
+	if (this->attributeType==INTEGER) {
+		LeafNodeInt* currentNode = (LeafNodeInt *) currentPageData;
 
-    while ((currentNode->ridArray[0].page_number!=0)) {
-        // search key on one page
-        for(int i = 0; i < leafOccupancy; i++) {
-            int key = currentNode->keyArray[i];
+		while ((currentNode->ridArray[0].page_number!=0)) {
+			// search key on one page
+			for(int i = 0; i < leafOccupancy; i++) {
+				int key = currentNode->keyArray[i];
 
-            // if key has been inserted
-            if(currentNode->ridArray[i].page_number == 0) {
-                break;
-            }
+				// if key has been inserted
+				if(currentNode->ridArray[i].page_number == 0) {
+					break;
+				}
 
-            // find key
-            if (((lowOp==GT && key>lowValInt) || (lowOp==GTE && key>=lowValInt)) && 
-						((highOp==LT && key<highValInt) || (highOp==LTE && key<=highValInt))) {
-                nextEntry = i;
-                scanExecuting = true;
-                keyFound = true;
-                return;
-            }
+				// find key
+				if (((lowOp==GT && key>lowValInt) || (lowOp==GTE && key>=lowValInt)) && 
+							((highOp==LT && key<highValInt) || (highOp==LTE && key<=highValInt))) {
+					nextEntry = i;
+					scanExecuting = true;
+					keyFound = true;
+					return;
+				}
 
-            // check edge cases
-            else if ((highOp==LT && key>=highValInt) 
-                    || (highOp==LTE && key>highValInt)) {
-                return;
-            }
-        }
-        // no next leaf
-        if(currentNode->rightSibPageNo == 0) {
-            return;
-        }
+				// check edge cases
+				else if ((highOp==LT && key>=highValInt) 
+						|| (highOp==LTE && key>highValInt)) {
+					return;
+				}
+			}
+			// no next leaf
+			if(currentNode->rightSibPageNo == 0) {
+				return;
+			}
 
-        // move to the next leaf
-        bufMgr->unPinPage(file, currentPageNum, false);
-        currentPageNum = currentNode->rightSibPageNo;
-        bufMgr->readPage(file, currentPageNum, currentPageData);
-        currentNode = (LeafNodeInt *) currentPageData;
-    }
+			// move to the next leaf
+			bufMgr->unPinPage(file, currentPageNum, false);
+			currentPageNum = currentNode->rightSibPageNo;
+			bufMgr->readPage(file, currentPageNum, currentPageData);
+			currentNode = (LeafNodeInt*) currentPageData;
+		}
+	}
 }
 
 // -----------------------------------------------------------------------------
