@@ -415,6 +415,11 @@ class BTreeIndex {
    * the pageId when the root page hasn't been split
    */
   PageId OrigRootId;
+
+  /*
+   * useful when recurse up
+   */
+  PageKeyPair<int>* recurPair;
   
   /**
    * Find out if the whole leaf page is full
@@ -453,13 +458,13 @@ class BTreeIndex {
    * Recursive function to insert the index entry to the index file
    * @param curPage           The current Page we are checking
    * @param curPageNum        PageId of current Page
-   * @param leafNode        If the current page is a leaf node or nonleaf node
+   * @param nodeIsLeaf        If the current page is a leaf node or nonleaf node
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
   template <typename T>
-  const void insertRecursive(Page *curPage, PageId curPageNum, bool leafNode, 
+  const void insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
                             const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
   
   /**
@@ -531,7 +536,7 @@ class BTreeIndex {
    * @param nextNodenum   Return value for the next level page ID
    * @param key           The Key we are checking
   */
-  const void findPageNoInNonLeaf(Page *curPage, PageId &nextNodenum, const void *key);
+  const void findPageNoInNonLeaf(NonLeafNodeInt *curPage, PageId &nextNodenum, const void *key);
 
   /**
    * Help reach to the leftmost leaf in a tree using findPageNoInNonLeaf iteratively
