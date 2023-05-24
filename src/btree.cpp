@@ -169,9 +169,9 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertEntry
 // -----------------------------------------------------------------------------
-
+template <typename T>
 const void BTreeIndex::insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
-                const void *key, const RecordId rid, PageKeyPair<int> *&recurPair)
+                const void *key, const RecordId rid, PageKeyPair<T> *&recurPair)
 {
     if (nodeIsLeaf) {
         // leaf page helper function
@@ -225,9 +225,9 @@ bool BTreeIndex::nodeFull(Page* curPage) {
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertIntoLeaf
 // -----------------------------------------------------------------------------
-
+template <typename T>
 const void BTreeIndex::insertIntoLeaf(Page *curPage, PageId curPageNum,
-      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair) 
+      const void *key, const RecordId rid, PageKeyPair<T> *&recurPair) 
 {
     if (!leafFull(curPage)) { // page is not full
         this->insertLeaf(curPage, key, rid);
@@ -242,8 +242,8 @@ const void BTreeIndex::insertIntoLeaf(Page *curPage, PageId curPageNum,
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertIntoNode
 // -----------------------------------------------------------------------------
-
-const void BTreeIndex::insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<int> *&recurPair) 
+template <typename T>
+const void BTreeIndex::insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<T> *&recurPair) 
 {
     // if page not full
     if (!nodeFull(curPage)) {
@@ -300,8 +300,8 @@ const void BTreeIndex::insertLeaf(Page* curPage, const void *key, const RecordId
 // -----------------------------------------------------------------------------
 // BTreeIndex::insertNonLeaf
 // -----------------------------------------------------------------------------
-
-const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair)
+template <typename T>
+const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<T> *recurPair)
 {
     NonLeafNodeInt* nonLeaf = (NonLeafNodeInt*) curPage;
 
@@ -340,9 +340,9 @@ const void BTreeIndex::insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair)
 // -----------------------------------------------------------------------------
 // BTreeIndex::splitLeaf
 // -----------------------------------------------------------------------------
-
+template <typename T>
 const void BTreeIndex::splitLeaf(Page* curPage, PageId leafPageId, 
-          const void *key, const RecordId rid, PageKeyPair<int>*& recurPair)
+          const void *key, const RecordId rid, PageKeyPair<T>*& recurPair)
 {
     PageId rightId;
     Page* rightPage;
@@ -390,9 +390,9 @@ const void BTreeIndex::splitLeaf(Page* curPage, PageId leafPageId,
 // -----------------------------------------------------------------------------
 // BTreeIndex::updateMidLeaf
 // -----------------------------------------------------------------------------
-
+template <typename T>
 const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rightId,
-      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair)
+      const void *key, const RecordId rid, PageKeyPair<T> *&recurPair)
 {
     LeafNodeInt* leftNode = (LeafNodeInt*) leftPage;
     LeafNodeInt* rightNode = (LeafNodeInt*) rightPage;
@@ -429,8 +429,8 @@ const void BTreeIndex::updateMidLeaf(Page* leftPage, Page* rightPage, PageId rig
 // -----------------------------------------------------------------------------
 // BTreeIndex::splitNonLeaf
 // -----------------------------------------------------------------------------
-
-const void BTreeIndex::splitNonLeaf(Page* curPage, PageId leafPageId, PageKeyPair<int> *&recurPair)
+template <typename T>
+const void BTreeIndex::splitNonLeaf(Page* curPage, PageId leafPageId, PageKeyPair<T> *&recurPair)
 {
     PageId rightId;
     Page* rightPage;
@@ -475,9 +475,9 @@ const void BTreeIndex::splitNonLeaf(Page* curPage, PageId leafPageId, PageKeyPai
 // -----------------------------------------------------------------------------
 // BTreeIndex::updateMidNode
 // -----------------------------------------------------------------------------
-
+template <typename T>
 const void BTreeIndex::updateMidNode(Page* leftPage, Page* rightPage, PageId rightId,
-                  PageKeyPair<int> *&recurPair)
+                  PageKeyPair<T> *&recurPair)
 {
     // std::cout << "------------updateMidLeaf used------------" << std::endl;
     NonLeafNodeInt* leftNode = (NonLeafNodeInt*) leftPage;

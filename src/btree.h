@@ -441,8 +441,9 @@ class BTreeIndex {
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
+  template <typename T>
   const void insertIntoLeaf(Page *curPage, PageId curPageNum,
-      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+      const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
 
   /**
    * Helper function for insertRecursive at recursive step
@@ -450,7 +451,8 @@ class BTreeIndex {
    * @param curPageNum        PageId of current Page
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
-  const void insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<int> *&recurPair);
+  template <typename T>
+  const void insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<T> *&recurPair);
 
   /**
    * Recursive function to insert the index entry to the index file
@@ -461,8 +463,9 @@ class BTreeIndex {
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
   */
+  template <typename T>
   const void insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
-                            const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+                            const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
   
   /**
    * Helper function to insert entry into a leaf node
@@ -478,40 +481,43 @@ class BTreeIndex {
    * @param recurPair		
    *
    */
-  const void insertNonLeaf(Page* curPage, PageKeyPair<int> *recurPair);
+  template <typename T>
+  const void insertNonLeaf(Page* curPage, PageKeyPair<T> *recurPair);
 
   /**
    * Helper function to splitLeafNode when the leafNode is full
-   * @param curPage          Leaf page that is full
+   * @param curPage       Leaf page that is full
    * @param leafPageNum   The number of page of that leaf
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair The key-page pair useful for tracking recursion
   */
+  template <typename T>
   const void splitLeaf(Page* curPage, PageId leafPageNum, 
-          const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+          const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
 
   /**
    * Helper function to splitLeafNode when the leafNode is full
-   * @param leftPage          Left page that is full
+   * @param leftPage    Left page that is full
    * @param rightPage   Right page after split 
    * @param rightId     Right page id
    * @param key			Key to insert, pointer to integer/double/char string
    * @param rid			Record ID of a record whose entry is getting inserted into the index.
    * @param recurPair The key-page pair useful for tracking recursion
   */
+  template <typename T>
   const void updateMidLeaf(Page* leftPage, Page* rightPage, PageId rightId,
-      const void *key, const RecordId rid, PageKeyPair<int> *&recurPair);
+      const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
 
   /**
    * Recursive function to insert the index entry to the index file
    * @param oldNode           the node that needs to be split
    * @param oldPageNum        PageId of the oldNode
-   * @param key			Key to insert, pointer to integer/double/char string
    * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node;
    *                          The value gets updated to contain the new keyPair that needs to be pushed up;
   */
-  const void splitNonLeaf(Page* curPage, PageId oldPageNum, PageKeyPair<int> *&recurPair);
+  template <typename T>
+  const void splitNonLeaf(Page* curPage, PageId oldPageNum, PageKeyPair<T> *&recurPair);
 
   /**
    * Helper function to splitNonLeaf when the NonleafNode is full
@@ -520,8 +526,9 @@ class BTreeIndex {
    * @param rightId     Right page id
    * @param recurPair The key-page pair useful for tracking recursion
   */
+  template <typename T>
   const void updateMidNode(Page* leftPage, Page* rightPage, PageId rightId,
-                  PageKeyPair<int> *&recurPair);
+                  PageKeyPair<T> *&recurPair);
   
   /**
    * Helper function to find the next level of page for the key should be in. 
