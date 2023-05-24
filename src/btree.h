@@ -428,6 +428,32 @@ class BTreeIndex {
   */
   bool nodeFull(Page* curPage);
 
+
+  /**
+   * Helper function of insertEntry that insert recursively
+   * @param curPage The page we are looking at
+   * @param curPageNum Corresponding page number
+   * @param leafNode Indicate node type
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair A pageKeyPair that tracks the recursions
+  */
+  template <typename T>
+  const void insertRecursive(Page *curPage, PageId curPageNum, bool leafNode, 
+                            const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
+  
+  /**
+   * Helper function of insertEntry that insert recursively
+   * @param curPage The page we are looking at
+   * @param curPageNum Corresponding page number
+   * @param leafNode Indicate node type
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair A pageKeyPair that tracks the recursions
+  */
+  const void insertRecursiveString(Page *curPage, PageId curPageNum, bool leafNode, 
+                            const void *key, const RecordId rid, PageKeyPair<std::string> *&recurPair);
+  
   /**
    * Helper function for insertRecursive at leaf page
    * @param curPage           The current Page we are checking
@@ -441,6 +467,17 @@ class BTreeIndex {
       const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
 
   /**
+   * Helper function for insertRecursive at leaf page
+   * @param curPage           The current Page we are checking
+   * @param curPageNum        PageId of current Page
+   * @param key			Key to insert, pointer to integer/double/char string
+   * @param rid			Record ID of a record whose entry is getting inserted into the index.
+   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
+  */
+  const void insertIntoLeafString(Page *curPage, PageId curPageNum,
+      const void *key, const RecordId rid, PageKeyPair<std::string> *&recurPair);
+
+  /**
    * Helper function for insertRecursive at recursive step
    * @param curPage           The current Page we are checking
    * @param curPageNum        PageId of current Page
@@ -448,19 +485,6 @@ class BTreeIndex {
   */
   template <typename T>
   const void insertIntoNode(Page *curPage, PageId curPageNum, PageKeyPair<T> *&recurPair);
-
-  /**
-   * Recursive function to insert the index entry to the index file
-   * @param curPage           The current Page we are checking
-   * @param curPageNum        PageId of current Page
-   * @param leafNode        If the current page is a leaf node or nonleaf node
-   * @param key			Key to insert, pointer to integer/double/char string
-   * @param rid			Record ID of a record whose entry is getting inserted into the index.
-   * @param recurPair     A pageKeyPair that contains an entry that is pushed up after splitting a node; it is null if no split in child nodes
-  */
-  template <typename T>
-  const void insertRecursive(Page *curPage, PageId curPageNum, bool leafNode, 
-                            const void *key, const RecordId rid, PageKeyPair<T> *&recurPair);
   
   /**
    * Helper function to insert entry into a leaf node
