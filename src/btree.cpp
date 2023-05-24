@@ -33,18 +33,6 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
 		const int attrByteOffset,
 		const Datatype attrType)
 {
-    /* VARIABLES:
-      1: bufMgr, attributeType, attrByteOffset, leafOccupancy, nodeOccupancy,
-        file, headerPageNum, rootPageNum
-    */
-
-    /* VARIABLES SCANNING
-      1: scanExecuting, 
-
-      2: nextEntry, currentPageNum, currentPageData,
-      lowValInt (double/string), highValInt (double/string),
-      lowOp, highOp
-    */
     std::ostringstream idxStr;
     idxStr << relationName << '.' << attrByteOffset;
     outIndexName = idxStr.str(); 
@@ -69,35 +57,9 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
     BlobFile* check_index;
     IndexMetaInfo* blob_meta;
     try {
-        // file exists
-		    check_index = new BlobFile(outIndexName, false);
-        this->headerPageNum = this->file->getFirstPageNo();
-        this->scanExecuting = false; // no need to scan
-        bool flush = false;
-
-        this->file = (File*) check_index;
-
-        // check metapage
-        Page* blob_metaPage;
-        this->bufMgr->readPage(this->file, this->headerPageNum, blob_metaPage);
-        IndexMetaInfo* metaPage = (IndexMetaInfo*) blob_metaPage;
-        if ((relationName.compare(metaPage->relationName)!=0) ||
-            (attrByteOffset!=metaPage->attrByteOffset) ||
-            (attrType!=metaPage->attrType)) {
-            throw BadIndexInfoException("Meta info does not match");
-        }
-    
-        // assign tree attributes and unpin read pages
-        this->rootPageNum = metaPage->rootPageNo;
-        this->bufMgr->unPinPage(this->file, this->headerPageNum, flush);
-
-    }
-    //File was not found thus we create a new one
-    catch(FileNotFoundException e) {
-        //File did not exist from upon, thus create a new blob file
+        // file does not exist so create a new blob file
         check_index = new BlobFile(outIndexName, true);
         this->file = (File*) check_index;
-        this->heightTree = 0;
 
         // allocate root and header page
         Page *blob_metaPage;
@@ -116,7 +78,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         // assign rootpage id through page allocation
         this->bufMgr->allocPage(this->file, this->rootPageNum, this->rootP);
         blob_meta->rootPageNo = this->rootPageNum;
-        this->initialRootPageNum = this->rootPageNum;
+        this->OrigRootId = this->rootPageNum;
 
         if (this->attributeType==INTEGER) {
             LeafNodeInt* rootN = (LeafNodeInt*) this->rootP;
@@ -153,6 +115,30 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
             }
         }
     }
+    //File was not found thus we create a new one
+    catch(FileExistsException e) {
+        // file exists
+		check_index = new BlobFile(outIndexName, false);
+        this->headerPageNum = this->file->getFirstPageNo();
+        this->scanExecuting = false; // no need to scan
+        bool flush = false;
+
+        this->file = (File*) check_index;
+
+        // check metapage
+        Page* blob_metaPage;
+        this->bufMgr->readPage(this->file, this->headerPageNum, blob_metaPage);
+        IndexMetaInfo* metaPage = (IndexMetaInfo*) blob_metaPage;
+        if ((relationName.compare(metaPage->relationName)!=0) ||
+            (attrByteOffset!=metaPage->attrByteOffset) ||
+            (attrType!=metaPage->attrType)) {
+            throw BadIndexInfoException("Meta info does not match");
+        }
+    
+        // assign tree attributes and unpin read pages
+        this->rootPageNum = metaPage->rootPageNo;
+        this->bufMgr->unPinPage(this->file, this->headerPageNum, flush);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -172,12 +158,12 @@ BTreeIndex::~BTreeIndex()
 
 const void BTreeIndex::insertEntry(const void *key, const RecordId rid) 
 {
-  this->bufMgr->readPage(this->file, this->rootPageNum, this->rootP);
-  recurPair = nullptr;
+    this->bufMgr->readPage(this->file, this->rootPageNum, this->rootP);
+    recurPair = nullptr;
 
-  if (initialRootPageNum == rootPageNum) {
-      this->insertRecursive(this->rootP, this->rootPageNum, true, key, rid, this->recurPair);
-  } else this->insertRecursive(this->rootP, this->rootPageNum, false, key, rid, this->recurPair);
+    if (!(this->rootPageNum-this->OrigRootId)) {
+        this->insertRecursive(this->rootP, this->rootPageNum, true, key, rid, this->recurPair);
+    } else this->insertRecursive(this->rootP, this->rootPageNum, false, key, rid, this->recurPair);
 }
 
 // -----------------------------------------------------------------------------
@@ -187,25 +173,25 @@ const void BTreeIndex::insertEntry(const void *key, const RecordId rid)
 const void BTreeIndex::insertRecursive(Page *curPage, PageId curPageNum, bool nodeIsLeaf, 
                 const void *key, const RecordId rid, PageKeyPair<int> *&recurPair)
 {
-  if (nodeIsLeaf) {
-      // leaf page helper function
-      this->insertIntoLeaf(curPage, curPageNum, key, rid, recurPair);
-  }
-  else {
-      NonLeafNodeInt *curNode = (NonLeafNodeInt*) curPage;
-      // find the right key to traverse
-      Page *nextPage;
-      PageId nextNodeNum;
-      this->findPageNoInNonLeaf(curNode, nextNodeNum, key);
-      this->bufMgr->readPage(this->file, nextNodeNum, nextPage);
-      nodeIsLeaf = curNode->level == 1;
-      this->insertRecursive(nextPage, nextNodeNum, nodeIsLeaf, key, rid, recurPair);
-    
-      if (recurPair) {
-          this->insertIntoNode(curPage, curPageNum, recurPair);
-      }
-      else this->bufMgr->unPinPage(this->file, curPageNum, false);
-  }
+    if (nodeIsLeaf) {
+        // leaf page helper function
+        this->insertIntoLeaf(curPage, curPageNum, key, rid, recurPair);
+    }
+    else {
+        NonLeafNodeInt *curNode = (NonLeafNodeInt*) curPage;
+        // find the right key to traverse
+        Page *nextPage;
+        PageId nextNodeNum;
+        this->findPageNoInNonLeaf(curNode, nextNodeNum, key);
+        this->bufMgr->readPage(this->file, nextNodeNum, nextPage);
+        nodeIsLeaf = curNode->level == 1;
+        this->insertRecursive(nextPage, nextNodeNum, nodeIsLeaf, key, rid, recurPair);
+        
+        if (recurPair) {
+            this->insertIntoNode(curPage, curPageNum, recurPair);
+        }
+        else this->bufMgr->unPinPage(this->file, curPageNum, false);
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -572,7 +558,7 @@ const void BTreeIndex::startScan(const void* lowValParm,
         this->bufMgr->readPage(this->file, this->currentPageNum, this->currentPageData);
 
         // root is not a leaf
-        if(initialRootPageNum != rootPageNum) {
+        if(this->rootPageNum-this->OrigRootId) {
             this->findStartLeaf(lowValParm);
         }
         // find the smallest one that meet the predicate on leaf

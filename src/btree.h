@@ -414,12 +414,7 @@ class BTreeIndex {
   /*
    * the pageId when the root page hasn't been split
    */
-  PageId initialRootPageNum;
-
-  /*
-   * Keep track of the height of tree
-   */
-  int heightTree;
+  PageId OrigRootId;
 
   /*
    * useful when recurse up
