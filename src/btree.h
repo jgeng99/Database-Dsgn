@@ -615,6 +615,14 @@ class BTreeIndex {
   const void findPageNoInNonLeaf(Page *curPage, PageId &nextId, const void *key);
 
   /**
+   * Find the corresponding children of curPage
+   * @param curPage The page we are looking at
+   * @param nextId Return value for the next level page ID
+   * @param key Key to insert, string
+  */
+  const void findPageNoInNonLeafString(Page *curPage, PageId &nextId, std::string key);
+
+  /**
    * Help reach to the leftmost leaf in a tree using findPageNoInNonLeaf iteratively
    * @param lowVal Low value of range, pointer to integer / double / char string
   */

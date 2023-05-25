@@ -1189,23 +1189,43 @@ const void BTreeIndex::findPageNoInNonLeaf(Page *curPage, PageId &nextNodeNum, c
         }
     }
     else {
-        std::string keyOp = std::string(static_cast<const char*>(key)); 
         NonLeafNodeString* nonLeafNode = (NonLeafNodeString*) curPage;
-        // std::string keyOp = *(std::string*) key;
+        // std::cout<<"raw key: "<<key;
+        std::string keyOp = *(std::string*) key;
+        // std::string keyOp = std::string(static_cast<const char*>(key));
 
-        // char keyChar[STRINGSIZE + 1];
+        // char keyChar[STRINGSIZE];
         // char* src = (char*)(key + this->attrByteOffset);
         // strncpy(keyChar, src, sizeof(keyChar));
         // std::string keyOp = std::string(keyChar);
+        // keyOp = keyOp.substr(0, STRINGSIZE);
 
         for (int i=nodeOccupancy-1; i>=0; i--) {
             if (nonLeafNode->pageNoArray[i]) {
                 // std::string keyOp = *(std::string*) key;
                 if (!i || nonLeafNode->keyArray[i-1]<keyOp) {
-                    std::cout<<"key: "<<keyOp<<" Go to page: "<<i<<std::endl;
+                    // std::cout<<" key: "<<keyOp<<" page: "<<i<<std::endl;
                     nextNodeNum = nonLeafNode->pageNoArray[i];
                     return;
                 }
+            }
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// BTreeIndex::findPageNoInNonLeafString
+// -----------------------------------------------------------------------------
+
+const void BTreeIndex::findPageNoInNonLeafString(Page *curPage, PageId &nextNodeNum, std::string keyOp)
+{
+    NonLeafNodeString* nonLeafNode = (NonLeafNodeString*) curPage;
+    for (int i=nodeOccupancy-1; i>=0; i--) {
+        if (nonLeafNode->pageNoArray[i]) {
+            if (!i || nonLeafNode->keyArray[i-1]<keyOp) {
+                std::cout<<" key: "<<keyOp<<" page: "<<i<<std::endl;
+                nextNodeNum = nonLeafNode->pageNoArray[i];
+                return;
             }
         }
     }
@@ -1276,6 +1296,8 @@ const void BTreeIndex::startScan(const void* lowValParm,
         this->highValString = std::string(static_cast<const char*>(highValParm));
         this->lowValString = this->lowValString.substr(0,STRINGSIZE);
         this->highValString = this->highValString.substr(0,STRINGSIZE);
+        std::cout<<"lowValString: "<<lowValString<<" highValString: "<<highValString<<std::endl;
+        // std::cout<<this->OrigRootId<<std::endl<<std::endl;
 
         if (lowValString>highValString) throw BadScanrangeException();
         this->lowOp = lowOpParm;
@@ -1287,7 +1309,6 @@ const void BTreeIndex::startScan(const void* lowValParm,
         // std::cout<<this->rootPageNum<<std::endl<<std::endl;
         // std::cout<<this->OrigRootId<<std::endl<<std::endl;
         if(this->rootPageNum-this->OrigRootId) {
-            // std::cout<<"12345"<<std::endl<<std::endl;
             this->findStartLeaf(lowValParm);
         }
         // find the smallest one that meet the predicate on leaf
@@ -1357,7 +1378,7 @@ const void BTreeIndex::findStartLeaf(const void* lowValParm) {
         // reach toward the parent of a leaf
         while(currentNode->level!=1) {
             // find the child page given some predicate
-            this->findPageNoInNonLeaf(this->currentPageData, nextPageNum, lowValParm);
+            this->findPageNoInNonLeafString(this->currentPageData, nextPageNum, this->lowValString);
             this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
 
             // proceed to the child page
@@ -1368,7 +1389,7 @@ const void BTreeIndex::findStartLeaf(const void* lowValParm) {
 
         // parent of a leaf
         // std::cout<<"Before: "<<this->currentPageNum<<std::endl;
-        this->findPageNoInNonLeaf(this->currentPageData, nextPageNum, lowValParm);
+        this->findPageNoInNonLeafString(this->currentPageData, nextPageNum, this->lowValString);
         this->bufMgr->unPinPage(this->file, this->currentPageNum, false);
         this->currentPageNum = nextPageNum;
         // std::cout<<"After: "<<this->currentPageNum<<std::endl;
@@ -1476,8 +1497,8 @@ const void BTreeIndex::findKeyLeaf(bool& keyFound) {
                 // std::string(static_cast<const char*>(lowValParm))
                 std::string key = currentNode->keyArray[i];
                 key = key.substr(0, STRINGSIZE);
-                // std::cout<<this->nextEntry<<"lowValString("<<lowValString<<") < key("<<key<<") < highstring(";
-                // std::cout<<highValString<<") "<<(key<highValString&&key>lowValString)<<std::endl;
+                std::cout<<this->nextEntry<<"lowValString("<<lowValString<<") < key("<<key<<") < highstring(";
+                std::cout<<highValString<<") "<<(key<highValString&&key>lowValString)<<std::endl;
 
                 // find key
                 if (((lowOp==GT && key>lowValString) 
