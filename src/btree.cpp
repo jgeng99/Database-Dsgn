@@ -97,9 +97,9 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
         else {
             LeafNodeString* rootN = (LeafNodeString*) this->rootP;
             rootN->rightSibPageNo = 0;
-            for(int i = 0; i < (this->leafOccupancy); i++) {
-                strncpy(rootN->keyArray[i], "", sizeof(rootN->keyArray[i]));
-            }
+            // for(int i = 0; i < (this->leafOccupancy); i++) {
+            //     strncpy(rootN->keyArray[i], "", sizeof(rootN->keyArray[i]));
+            // }
         }
 
         // unpin root page
@@ -121,6 +121,7 @@ BTreeIndex::BTreeIndex(const std::string & relationName,
                     char* src = (char*)(curRecord.c_str() + attrByteOffset);
                     strncpy(key, src, sizeof(key));
                     std::string strKey = std::string(key);
+                    // std::cout<< "inserted key: "<<strKey<<std::endl;
                     this->insertEntry((void*) &strKey, scanRid);
                 }
             }
@@ -483,6 +484,7 @@ const void BTreeIndex::insertLeaf(Page* curPage, const void *key, const RecordId
         // determine the number of valid keys in the leaf
         LeafNodeString* leafString = (LeafNodeString*) curPage;
         std::string keyString = *((std::string*) key);
+        // std::string(static_cast<const char*>(key));
         int validKeys = 0;
         while((validKeys<leafOccupancy) && 
             (leafString->ridArray[validKeys].page_number)) {
@@ -854,6 +856,7 @@ const void BTreeIndex::updateMidLeafString(Page* leftPage, Page* rightPage, Page
     LeafNodeString* leftNode = (LeafNodeString*) leftPage;
     LeafNodeString* rightNode = (LeafNodeString*) rightPage;
     std::string keyOps = *((std::string*) key);
+    // std::string(static_cast<const char*>(key));
 
     // determine the index of the middle key
     int mid = leafOccupancy/2;
@@ -871,6 +874,9 @@ const void BTreeIndex::updateMidLeafString(Page* leftPage, Page* rightPage, Page
     }
 
     // insert and copy up
+    // std::cout<<"keyarray "<<rightNode->keyArray[0][0]<<std::endl<<std::endl;
+    // std::cout<<"pairkey "<<keyOps<<std::endl;
+    // throw;
     if (keyOps<rightNode->keyArray[0]) {
         this->insertLeaf(leftPage, key, rid);
     }
@@ -1241,6 +1247,10 @@ const void BTreeIndex::startScan(const void* lowValParm,
         // sanity check
         this->lowValString = std::string(static_cast<const char*>(lowValParm));
         this->highValString = std::string(static_cast<const char*>(highValParm));
+        int posLow = lowValString.find(" ");
+        int posHigh = highValString.find(" ");
+        this->lowValString = this->lowValString.substr(0,posLow);
+        this->highValString = this->highValString.substr(0,posHigh);
 
         if (lowValString>highValString) throw BadScanrangeException();
         this->lowOp = lowOpParm;
@@ -1430,16 +1440,25 @@ const void BTreeIndex::findKeyLeaf(bool& keyFound) {
             for(int i = 0; i < leafOccupancy; i++) {
                 // std::string(static_cast<const char*>(lowValParm))
                 std::string key = currentNode->keyArray[i];
+                key = key.substr(0, 5);
 
                 // if key has been inserted
                 if(!currentNode->ridArray[i].page_number) {
                     break;
                 }
 
+                // std::cout<<"Lowop: "<<lowOp<<" Highop: "<<highOp<<std::endl;
+                // std::cout<<nextEntry<<" key("<<key<<")>lowValString(";
+                // std::cout<<lowValString<<") "<<(key>lowValString)<<std::endl;
+                // std::cout<<nextEntry<<" key("<<key<<")<highstring(";
+                // std::cout<<highValString<<") "<<(key<highValString)<<std::endl<<std::endl;
                 // find key
-                if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) 
-                        && ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
+                if (((lowOp==GT && key>lowValString) 
+                    || (lowOp==GTE && key>=lowValString)) 
+                    && ((highOp==LT && key<highValString) 
+                    || (highOp==LTE && key<=highValString))) {
                     this->nextEntry = i;
+                    // std::cout<<currentNode->keyArray[this->nextEntry]<<std::endl;
                     this->scanExecuting = true;
                     keyFound = true;
                     // std::cout<<"the starting key is: "<<key<<std::endl<<std::endl;
@@ -1543,14 +1562,24 @@ const void BTreeIndex::scanNext(RecordId& outRid)
         if (this->nextEntry<leafOccupancy) {
             if (currentNode->ridArray[this->nextEntry].page_number) {
                 std::string key = currentNode->keyArray[this->nextEntry];
-                if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) && 
-                        ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
+                key = key.substr(0,5);
+                // std::cout<<nextEntry<<" key("<<key<<")>lowValString(";
+                // std::cout<<lowValString<<") "<<(key>lowValString)<<std::endl;
+                // std::cout<<nextEntry<<" key("<<key<<")<highstring(";
+                // std::cout<<highValString<<") "<<(key<highValString)<<std::endl<<std::endl;
+                if (((lowOp==GT && key>lowValString) 
+                    || (lowOp==GTE && key>=lowValString)) 
+                    && ((highOp==LT && key<highValString) 
+                    || (highOp==LTE && key<=highValString))) {
                     outRid = currentNode->ridArray[this->nextEntry];
                     this->nextEntry++;
                     return;
                 }
             }
-            else if (!currentNode->rightSibPageNo) throw IndexScanCompletedException();
+            else if (!currentNode->rightSibPageNo) {
+                std::cout << "End of page!" << std::endl;
+                throw IndexScanCompletedException();
+            }
         }
 
         // change to right leaf
@@ -1562,8 +1591,10 @@ const void BTreeIndex::scanNext(RecordId& outRid)
 
         // check again
         std::string key = currentNode->keyArray[this->nextEntry];
-        if (((lowOp==GT && key>lowValString) || (lowOp==GTE && key>=lowValString)) && 
-                ((highOp==LT && key<highValString) || (highOp==LTE && key<=highValString))) {
+        if (((lowOp==GT && key>lowValString) 
+            || (lowOp==GTE && key>=lowValString)) 
+            && ((highOp==LT && key<highValString) 
+            || (highOp==LTE && key<=highValString))) {
             outRid = currentNode->ridArray[this->nextEntry];
             this->nextEntry++;
             return;
