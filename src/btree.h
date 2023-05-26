@@ -492,7 +492,6 @@ class BTreeIndex {
    * @param curPageNum Corresponding page number
    * @param recurPair A pageKeyPair that tracks the recursions
   */
-
   const void insertIntoNodeString(Page *curPage, PageId curPageNum, PageKeyPair<std::string> *&recurPair);
 
   /**
@@ -513,7 +512,7 @@ class BTreeIndex {
   const void insertNonLeaf(Page* curPage, PageKeyPair<T> *recurPair);
 
   /**
-   * Helper function for insertRecursive at non-leaf level
+   * Helper function for insertRecursiveString at non-leaf level
    * @param curPage  The page we are looking at
    * @param recurPair	A pageKeyPair that tracks the recursions
    *
@@ -615,7 +614,7 @@ class BTreeIndex {
   const void findPageNoInNonLeaf(Page *curPage, PageId &nextId, const void *key);
 
   /**
-   * Find the corresponding children of curPage
+   * Find the corresponding children of curPage for string type only
    * @param curPage The page we are looking at
    * @param nextId Return value for the next level page ID
    * @param key Key to insert, string
