@@ -43,6 +43,8 @@ int testNum = 1;
 const std::string relationName = "relA";
 //If the relation size is changed then the second parameter 2 chechPassFail may need to be changed to number of record that are expected to be found during the scan, else tests will erroneously be reported to have failed.
 const int	relationSize = 5000;
+const int	myRelationSize = 50000;
+const int 	myRelationSize2 = 100000;
 std::string intIndexName, doubleIndexName, stringIndexName;
 
 // This is the structure for tuples in the base relation
@@ -79,6 +81,23 @@ void test2();
 void test3();
 void errorTests();
 void deleteRelation();
+
+// -----------------------------------------------------------------------------
+// My test declarations
+// -----------------------------------------------------------------------------
+void myTest1();
+void myTest2();
+void createMyRelation();
+void createMyRelation2();
+void myIndexTests();
+void myIntTests();
+void myDoubleTests();
+void myStringTests();
+void myIndexTests2();
+void myIntTests2();
+void myDoubleTests2();
+void myStringTests2();
+
 
 int main(int argc, char **argv)
 {
@@ -168,6 +187,10 @@ int main(int argc, char **argv)
 	test3();
 	errorTests();
 
+	// my tests
+	myTest1();
+	myTest2();
+
   return 1;
 }
 
@@ -201,6 +224,28 @@ void test3()
 	std::cout << "createRelationRandom" << std::endl;
 	createRelationRandom();
 	indexTests();
+	deleteRelation();
+}
+
+void myTest1()
+{
+	// Create a relation with tuples valued 0 to relationSize and perform index tests 
+	// on attributes of all three types (int, double, string)
+	std::cout << "---------------------" << std::endl;
+	std::cout << "createMyRelation" << std::endl;
+	createMyRelation();
+	myIndexTests();
+	deleteRelation();
+}
+
+void myTest2()
+{
+	// Create a relation with tuples valued 0 to relationSize and perform index tests 
+	// on attributes of all three types (int, double, string)
+	std::cout << "---------------------" << std::endl;
+	std::cout << "createMyRelation" << std::endl;
+	createMyRelation2();
+	myIndexTests2();
 	deleteRelation();
 }
 
@@ -367,6 +412,123 @@ void createRelationRandom()
 }
 
 // -----------------------------------------------------------------------------
+// createMyRelation
+// -----------------------------------------------------------------------------
+
+void createMyRelation()
+{
+	std::vector<RecordId> ridVec;
+  // destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch(FileNotFoundException e)
+	{
+	}
+
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+//   int tracker = 0;
+
+  // Insert a bunch of tuples into the relation.
+  for(int i = 0; i < myRelationSize; i++ )
+	{
+    sprintf(record1.s, "%05d string record", i);
+    record1.i = i;
+    record1.d = (double)i;
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(record1));
+	// std::cout << tracker << std::endl;
+	// tracker ++;
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(InsufficientSpaceException e)
+			{
+				file1->writePage(new_page_number, new_page);
+  			new_page = file1->allocatePage(new_page_number);
+			}
+		}
+  }
+
+	file1->writePage(new_page_number, new_page);
+}
+
+// -----------------------------------------------------------------------------
+// createMyRelation
+// -----------------------------------------------------------------------------
+
+void createMyRelation2()
+{
+	// destroy any old copies of relation file
+	try
+	{
+		File::remove(relationName);
+	}
+	catch(FileNotFoundException e)
+	{
+	}
+  file1 = new PageFile(relationName, true);
+
+  // initialize all of record1.s to keep purify happy
+  memset(record1.s, ' ', sizeof(record1.s));
+	PageId new_page_number;
+  Page new_page = file1->allocatePage(new_page_number);
+
+  // insert records in random order
+
+  std::vector<int> intvec(myRelationSize2);
+  for( int i = 0; i < myRelationSize2; i++ )
+  {
+    intvec[i] = i;
+  }
+
+  long pos;
+  int val;
+	int i = 0;
+  while( i < myRelationSize2 )
+  {
+    pos = random() % (myRelationSize2-i);
+    val = intvec[pos];
+    sprintf(record1.s, "%05d string record", val);
+    record1.i = val;
+    record1.d = val;
+
+    std::string new_data(reinterpret_cast<char*>(&record1), sizeof(RECORD));
+
+		while(1)
+		{
+			try
+			{
+    		new_page.insertRecord(new_data);
+				break;
+			}
+			catch(InsufficientSpaceException e)
+			{
+      	file1->writePage(new_page_number, new_page);
+  			new_page = file1->allocatePage(new_page_number);
+			}
+		}
+
+		int temp = intvec[myRelationSize2-1-i];
+		intvec[myRelationSize2-1-i] = intvec[pos];
+		intvec[pos] = temp;
+		i++;
+  }
+  
+	file1->writePage(new_page_number, new_page);
+}
+
+// -----------------------------------------------------------------------------
 // indexTests
 // -----------------------------------------------------------------------------
 
@@ -405,6 +567,226 @@ void indexTests()
   	{
   	}
   }
+}
+
+// -----------------------------------------------------------------------------
+// myIndexTests
+// -----------------------------------------------------------------------------
+
+void myIndexTests()
+{
+  if(testNum == 1)
+  {
+    myIntTests();
+		try
+		{
+			File::remove(intIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 2)
+  {
+    myDoubleTests();
+		try
+		{
+			File::remove(doubleIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 3)
+  {
+	myStringTests();
+		try
+		{
+			File::remove(stringIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+}
+
+// -----------------------------------------------------------------------------
+// myIntTests
+// -----------------------------------------------------------------------------
+
+void myIntTests()
+{
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+
+	// check large sequence starting from 0
+	checkPassFail(intScan(&index,0,GT,10000,LT), 9999)
+	// check large sequence starting from non zero
+	checkPassFail(intScan(&index,234,GTE,23456,LTE), 23223)
+	// test negative start
+	checkPassFail(intScan(&index,-123,GT,56,LTE), 57)
+	// test negative range
+	checkPassFail(intScan(&index,-3456,GT,-1,LT), 0)
+	// test random range
+	checkPassFail(intScan(&index,9876,GTE,31258,LT), 21382)
+	// test last few slots
+	checkPassFail(intScan(&index,49957,GT,50000,LT), 42)
+}
+
+// -----------------------------------------------------------------------------
+// doubleTests
+// -----------------------------------------------------------------------------
+
+void myDoubleTests()
+{
+  std::cout << "Create a B+ Tree index on the double field" << std::endl;
+  BTreeIndex index(relationName, doubleIndexName, bufMgr, offsetof(tuple,d), DOUBLE);
+
+	// check large sequence starting from 0
+	checkPassFail(doubleScan(&index,0,GT,10000,LT), 9999)
+	// check large sequence starting from non zero
+	checkPassFail(doubleScan(&index,234,GTE,23456,LTE), 23223)
+	// test negative start
+	checkPassFail(doubleScan(&index,-123,GT,56,LTE), 57)
+	// test negative range
+	checkPassFail(doubleScan(&index,-3456,GT,-1,LT), 0)
+	// test random range
+	checkPassFail(doubleScan(&index,9876,GTE,31258,LT), 21382)
+	// test last few slots
+	checkPassFail(doubleScan(&index,49957,GT,50000,LT), 42)
+}
+
+// -----------------------------------------------------------------------------
+// stringTests
+// -----------------------------------------------------------------------------
+
+void myStringTests()
+{
+  std::cout << "Create a B+ Tree index on the string field" << std::endl;
+  BTreeIndex index(relationName, stringIndexName, bufMgr, offsetof(tuple,s), STRING);
+
+	// check large sequence starting from 0
+	checkPassFail(stringScan(&index,0,GT,10000,LT), 9999)
+	// check large sequence starting from non zero
+	checkPassFail(stringScan(&index,234,GTE,23456,LTE), 23223)
+	// test negative start
+	checkPassFail(stringScan(&index,-123,GT,56,LTE), 57)
+	// test negative range
+	checkPassFail(stringScan(&index,-3456,GT,-1,LT), 0)
+	// test random range
+	checkPassFail(stringScan(&index,9876,GTE,31258,LT), 21382)
+	// test last few slots
+	checkPassFail(stringScan(&index,49957,GT,50000,LT), 42)
+}
+
+// -----------------------------------------------------------------------------
+// myIndexTests2
+// -----------------------------------------------------------------------------
+
+void myIndexTests2()
+{
+  if(testNum == 1)
+  {
+    myIntTests2();
+		try
+		{
+			File::remove(intIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 2)
+  {
+    myDoubleTests2();
+		try
+		{
+			File::remove(doubleIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+  else if(testNum == 3)
+  {
+	myStringTests2();
+		try
+		{
+			File::remove(stringIndexName);
+		}
+  	catch(FileNotFoundException e)
+  	{
+  	}
+  }
+}
+
+// -----------------------------------------------------------------------------
+// myIntTests2
+// -----------------------------------------------------------------------------
+
+void myIntTests2()
+{
+  std::cout << "Create a B+ Tree index on the integer field" << std::endl;
+  BTreeIndex index(relationName, intIndexName, bufMgr, offsetof(tuple,i), INTEGER);
+
+	// check large sequence starting from 0
+	checkPassFail(intScan(&index,0,GT,50000,LT), 49999)
+	// check large sequence starting from non zero
+	checkPassFail(intScan(&index,581,GTE,67191,LTE), 66611)
+	// test negative start
+	checkPassFail(intScan(&index,-10000,GT,0,LTE), 1)
+	// test negative range
+	checkPassFail(intScan(&index,-67191,GT,-59,LT), 0)
+	// test random range
+	checkPassFail(intScan(&index,8921,GTE,65281,LT), 56360)
+	// test last few slots
+	checkPassFail(intScan(&index,90000,GT,100000,LT), 9999)
+}
+
+// -----------------------------------------------------------------------------
+// doubleTests2
+// -----------------------------------------------------------------------------
+
+void myDoubleTests2()
+{
+  std::cout << "Create a B+ Tree index on the double field" << std::endl;
+  BTreeIndex index(relationName, doubleIndexName, bufMgr, offsetof(tuple,d), DOUBLE);
+
+	// check large sequence starting from 0
+	checkPassFail(doubleScan(&index,0,GT,10000,LT), 9999)
+	// check large sequence starting from non zero
+	checkPassFail(doubleScan(&index,234,GTE,23456,LTE), 23223)
+	// test negative start
+	checkPassFail(doubleScan(&index,-123,GT,56,LTE), 57)
+	// test negative range
+	checkPassFail(doubleScan(&index,-3456,GT,-1,LT), 0)
+	// test random range
+	checkPassFail(doubleScan(&index,9876,GTE,31258,LT), 21382)
+	// test last few slots
+	checkPassFail(doubleScan(&index,49957,GT,50000,LT), 42)
+}
+
+// -----------------------------------------------------------------------------
+// stringTests2
+// -----------------------------------------------------------------------------
+
+void myStringTests2()
+{
+  std::cout << "Create a B+ Tree index on the string field" << std::endl;
+  BTreeIndex index(relationName, stringIndexName, bufMgr, offsetof(tuple,s), STRING);
+
+	// check large sequence starting from 0
+	checkPassFail(stringScan(&index,0,GT,10000,LT), 9999)
+	// check large sequence starting from non zero
+	checkPassFail(stringScan(&index,234,GTE,23456,LTE), 23223)
+	// test negative start
+	checkPassFail(stringScan(&index,-123,GT,56,LTE), 57)
+	// test negative range
+	checkPassFail(stringScan(&index,-3456,GT,-1,LT), 0)
+	// test random range
+	checkPassFail(stringScan(&index,9876,GTE,31258,LT), 21382)
+	// test last few slots
+	checkPassFail(stringScan(&index,49957,GT,50000,LT), 42)
 }
 
 // -----------------------------------------------------------------------------

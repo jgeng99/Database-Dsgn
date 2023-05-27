@@ -415,6 +415,11 @@ class BTreeIndex {
    * the pageId when the root page hasn't been split
    */
   PageId OrigRootId;
+
+  /*
+   * track the number of insertion for debugging
+   */
+  // int numInserted;
   
   /**
    * Find out if the whole leaf page is full
@@ -509,7 +514,7 @@ class BTreeIndex {
    *
    */
   template <typename T>
-  const void insertNonLeaf(Page* curPage, PageKeyPair<T> *recurPair);
+  const void insertNode(Page* curPage, PageKeyPair<T> *recurPair);
 
   /**
    * Helper function for insertRecursiveString at non-leaf level
@@ -517,7 +522,7 @@ class BTreeIndex {
    * @param recurPair	A pageKeyPair that tracks the recursions
    *
    */
-  const void insertNonLeafString(Page* curPage, PageKeyPair<std::string> *recurPair);
+  const void insertNodeString(Page* curPage, PageKeyPair<std::string> *recurPair);
 
   /**
    * Helper function to splitLeaf when the leafNode is full
@@ -574,7 +579,7 @@ class BTreeIndex {
    * @param recurPair A pageKeyPair that tracks the recursions
   */
   template <typename T>
-  const void splitNonLeaf(Page* curPage, PageId leafPageId, PageKeyPair<T> *&recurPair);
+  const void splitNode(Page* curPage, PageId leafPageId, PageKeyPair<T> *&recurPair);
 
   /**
    * Split when the non-leaf node is full
@@ -582,10 +587,10 @@ class BTreeIndex {
    * @param leafPageId PageId num of curPage
    * @param recurPair A pageKeyPair that tracks the recursions
   */
-  const void splitNonLeafString(Page* curPage, PageId leafPageId, PageKeyPair<std::string> *&recurPair);
+  const void splitNodeString(Page* curPage, PageId leafPageId, PageKeyPair<std::string> *&recurPair);
 
   /**
-   * Helper function to splitNonLeaf when the non-leaf node is full
+   * Helper function to splitNode when the non-leaf node is full
    * @param leftPage Left page that is full
    * @param rightPage Right page after split 
    * @param rightId Right page id
@@ -596,7 +601,7 @@ class BTreeIndex {
                   PageKeyPair<T> *&recurPair);
   
   /**
-   * Helper function to splitNonLeafString when the non-leaf node is full
+   * Helper function to splitNodeString when the non-leaf node is full
    * @param leftPage Left page that is full
    * @param rightPage Right page after split 
    * @param rightId Right page id
@@ -611,7 +616,7 @@ class BTreeIndex {
    * @param nextId Return value for the next level page ID
    * @param key Key to insert, pointer to integer/double/char string
   */
-  const void findPageNoInNonLeaf(Page *curPage, PageId &nextId, const void *key);
+  const void findPageNoInNode(Page *curPage, PageId &nextId, const void *key);
 
   /**
    * Find the corresponding children of curPage for string type only
@@ -619,10 +624,10 @@ class BTreeIndex {
    * @param nextId Return value for the next level page ID
    * @param key Key to insert, string
   */
-  const void findPageNoInNonLeafString(Page *curPage, PageId &nextId, std::string key);
+  const void findPageNoInNodeString(Page *curPage, PageId &nextId, std::string key);
 
   /**
-   * Help reach to the leftmost leaf in a tree using findPageNoInNonLeaf iteratively
+   * Help reach to the leftmost leaf in a tree using findPageNoInNode iteratively
    * @param lowVal Low value of range, pointer to integer / double / char string
   */
   const void findStartLeaf(const void* lowVal);
