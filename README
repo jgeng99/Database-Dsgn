@@ -1,4 +1,5 @@
-This is an index implementation using B+ tree to facilitate runtime of many operations in SQL.
+## Overview
+- This is an index implementation using B+ tree to facilitate runtime of many operations in Relational Data (SQL).
 
 ################################################################################
 # BadgerDB quick start guide                                                   #
